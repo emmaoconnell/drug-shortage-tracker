@@ -825,7 +825,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     # inside the plot area or restore a preferred placement.
     # ax: px right (+) / left (−)   ay: px down (+) / up (−)
     _BUBBLE_FORCED: dict[str, tuple] = {
-        "icu medical":  ( 48,   0, "left",   "middle"),  # straight right
+        "icu medical":  (  0, -42, "center", "bottom"),  # straight up
         "aurobindo":    ( 48,   0, "left",   "middle"),  # straight right
         "lannett":      (  0,  40, "center", "top"),     # straight down (lower-left feel, short)
     }
