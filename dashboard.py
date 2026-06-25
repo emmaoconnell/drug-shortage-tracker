@@ -765,13 +765,16 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         title=dict(text="", side="top"),
         tickvals=[0, 50, 100],
         ticktext=["Low", "Med", "High"],
-        tickfont=dict(family=_FONT, size=11, color=_tick_color),
-        thickness=14,
-        len=0.55,
-        x=1.02,
-        y=0.5,
-        yanchor="middle",
-        outlinewidth=0,
+        tickfont=dict(family=_FONT, size=10, color="#FFFFFF" if dark else "#374151"),
+        ticklabelposition="inside",
+        thickness=20,
+        len=0.30,
+        x=0.995,
+        xanchor="right",
+        y=0.975,
+        yanchor="top",
+        outlinewidth=1,
+        outlinecolor="rgba(148,163,184,0.25)" if dark else "rgba(100,116,139,0.20)",
         bgcolor=_cb_bg,
     )
 
@@ -874,14 +877,14 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         bgcolor="rgba(0,0,0,0)",
     ))
 
-    # ── Colorbar title (placed above gradient via annotation for spacing) ────
+    # ── Colorbar title (annotation above the inside gradient bar) ────────────
     annotations.append(dict(
         xref="paper", yref="paper",
-        x=1.072, y=0.84,
+        x=0.980, y=0.982,
         xanchor="center", yanchor="bottom",
         text="Risk Score",
         showarrow=False,
-        font=dict(family=_FONT, size=11, color=_tick_color),
+        font=dict(family=_FONT, size=10, color=_tick_color),
         bgcolor="rgba(0,0,0,0)",
     ))
 
@@ -933,7 +936,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         showlegend=False,
         dragmode=False,
         height=580,
-        margin=dict(t=120, b=100, l=80, r=110),
+        margin=dict(t=120, b=100, l=80, r=30),
         annotations=annotations,
         hoverlabel=dict(
             bgcolor="#1F2937" if dark else "#FFFFFF",
