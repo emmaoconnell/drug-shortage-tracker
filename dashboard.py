@@ -922,7 +922,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         showlegend=False,
         dragmode=False,
         height=580,
-        margin=dict(t=120, b=100, l=80, r=110),
+        margin=dict(t=70, b=100, l=80, r=110),
         annotations=annotations,
         hoverlabel=dict(
             bgcolor="#1F2937" if dark else "#FFFFFF",
