@@ -987,18 +987,17 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 return v
         return name.split(",")[0].split("(")[0].strip()[:12]
 
-    label_color = "#FFFFFF" if _theme.is_dark() else "#0F172A"
-    top6 = top.nlargest(6, "shortage_count")
+    top8 = top.nlargest(8, "shortage_count")
     annotations = []
-    for _, row in top6.iterrows():
+    for _, row in top8.iterrows():
         annotations.append(dict(
             x=float(row["shortage_count"]),
             y=float(row["pct_current"]),
             xref="x", yref="y",
             xanchor="center", yanchor="middle",
-            text=f"<b>{_rs_short(str(row['manufacturer']))}</b>",
+            text=f"<i>{_rs_short(str(row['manufacturer']))}</i>",
             showarrow=False,
-            font=dict(family=_FONT, size=11, color=label_color),
+            font=dict(family=_FONT, size=11, color="#4B5563"),
             bgcolor="rgba(0,0,0,0)",
             borderpad=0,
         ))
