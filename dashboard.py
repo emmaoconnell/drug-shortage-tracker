@@ -813,84 +813,27 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         showlegend=False,
     ))
 
-    # ── Per-bubble annotations with smart inside/outside placement ────────────
-    # Centroid of all 10 points — outside labels fan away from it so arrows
-    # radiate outward and don't cross each other.
-    _cx = float(top["market_share"].mean())
-    _cy = float(top["avg_duration"].mean())
-    _x_span = max(x_hi - x_lo, 1e-9)
-    _y_span = max(y_hi - y_lo, 1e-9)
-
-    # Per-manufacturer forced (ax, ay, xanchor, yanchor) to keep problem labels
-    # inside the plot area or restore a preferred placement.
-    # ax: px right (+) / left (−)   ay: px down (+) / up (−)
-    _BUBBLE_FORCED: dict[str, tuple] = {
-        "icu medical":  (  0, -42, "center", "bottom"),  # straight up
-        "aurobindo":    ( 48,   0, "left",   "middle"),  # straight right
-        "lannett":      (  0,  40, "center", "top"),     # straight down (lower-left feel, short)
-    }
-
-    def _forced_bubble(short_name: str, mfr: str) -> tuple | None:
-        key_src = (short_name + " " + mfr).lower()
-        for key, val in _BUBBLE_FORCED.items():
-            if key in key_src:
-                return val
-        return None
-
+    # ── Per-bubble annotations — all labels centered on their bubble, no leader lines ──
     annotations: list[dict] = []
     for i, row in top.iterrows():
         x_pt  = float(row["market_share"])
         y_pt  = float(row["avg_duration"])
         name  = str(row["short_name"])
-        mfr   = str(row["manufacturer"])
         drugs = float(row["unique_drugs"])
-
-        px_diam = (drugs / max_drugs) ** 0.5 * 110 if max_drugs else 18
-        px_diam = max(px_diam, 18)
-        inside = px_diam >= 52
 
         lbl_color = "#D1D5DB" if dark else "#4B5563"
         font_size = 10 if "<br>" in name or len(name.replace("<br>", " ")) > 10 else 11
 
-        if inside:
-            annotations.append(dict(
-                x=x_pt, y=y_pt,
-                xref="x", yref="y",
-                xanchor="center", yanchor="middle",
-                text=f"<i>{name}</i>",
-                showarrow=False,
-                font=dict(family=_FONT, size=font_size, color=lbl_color),
-                bgcolor="rgba(0,0,0,0)",
-                borderpad=0,
-            ))
-        else:
-            forced = _forced_bubble(name, mfr)
-            if forced:
-                ax, ay, xanchor, yanchor = forced
-            else:
-                # Direction from centroid → bubble, normalised to chart aspect ratio
-                dx = (x_pt - _cx) / _x_span
-                dy = (y_pt - _cy) / _y_span
-                mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
-                OFF = 48
-                ax =  (dx / mag) * OFF
-                ay = -(dy / mag) * OFF
-                xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
-                yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
-            annotations.append(dict(
-                x=x_pt, y=y_pt,
-                xref="x", yref="y",
-                ax=ax, ay=ay,
-                xanchor=xanchor, yanchor=yanchor,
-                text=f"<i>{name}</i>",
-                showarrow=True,
-                arrowhead=0,
-                arrowwidth=1,
-                arrowcolor="rgba(150,150,150,0.5)",
-                font=dict(family=_FONT, size=font_size, color=lbl_color),
-                bgcolor="rgba(0,0,0,0)",
-                borderpad=2,
-            ))
+        annotations.append(dict(
+            x=x_pt, y=y_pt,
+            xref="x", yref="y",
+            xanchor="center", yanchor="middle",
+            text=f"<i>{name}</i>",
+            showarrow=False,
+            font=dict(family=_FONT, size=font_size, color=lbl_color),
+            bgcolor="rgba(0,0,0,0)",
+            borderpad=0,
+        ))
 
     # ── Colorbar title (just above the gradient top at y≈0.775) ─────────────
     annotations.append(dict(
