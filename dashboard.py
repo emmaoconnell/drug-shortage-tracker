@@ -246,13 +246,19 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
     total  = int(counts["count"].sum())
     colors = [STATUS_COLORS.get(s, T.text_muted) for s in counts["status"]]
 
+    # Wrap "To Be Discontinued" in the legend; keep original label in hover via customdata
+    display_labels = [
+        "To Be<br>Discontinued" if s == "To Be Discontinued" else s
+        for s in counts["status"]
+    ]
     fig = go.Figure(go.Pie(
-        labels=counts["status"],
+        labels=display_labels,
         values=counts["count"],
         hole=0.62,
         marker=dict(colors=colors, line=dict(color=T.chart_bg, width=2.5)),
         textinfo="none",
-        hovertemplate="<b>%{label}</b><br>%{value:,} records<br>%{percent}<extra></extra>",
+        customdata=counts["status"],
+        hovertemplate="<b>%{customdata}</b><br>%{value:,} records<br>%{percent}<extra></extra>",
         pull=[0.04 if s == "Current" else 0 for s in counts["status"]],
         domain=dict(x=[0.05, 0.58], y=[0.12, 0.88]),
     ))
