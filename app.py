@@ -455,7 +455,7 @@ if page == "Overview":
             0.40 * total_current_pct + 0.35 * high_risk_pct + 0.25 * avg_risk_score, 1
         ), 100.0)
         score_label = "High" if env_score >= 65 else ("Moderate" if env_score >= 35 else "Low")
-        score_color = {"High": "#C81E1E", "Moderate": "#92400E", "Low": "#065F46"}[score_label]
+        score_color = {"High": "#C81E1E", "Moderate": "#D97706", "Low": "#065F46"}[score_label]
         score_bg    = {"High": "#FEE2E2", "Moderate": "#FEF3C7", "Low": "#D1FAE5"}[score_label]
     else:
         active_shortages = kpis["current_count"]
