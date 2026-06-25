@@ -1,0 +1,13 @@
+[theme]
+# All table rendering uses st.html() in the main DOM, not st.dataframe()
+# iframes, so this config only affects Streamlit's own chrome (scrollbars,
+# sidebar toggle, progress bars). Keep "light" as the neutral base.
+base                     = "light"
+backgroundColor          = "#F3F6FA"
+secondaryBackgroundColor = "#EDF2F7"
+textColor                = "#111827"
+primaryColor             = "#1A56DB"
+font                     = "sans serif"
+
+[server]
+headless = true

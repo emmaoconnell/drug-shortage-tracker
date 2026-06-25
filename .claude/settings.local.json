@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c 'import ast, pathlib *)",
+      "Bash(venv/bin/python3 -c ' *)",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Read(//opt/homebrew/**)",
+      "Read(//Users/emmaoconnell/.pyenv/**)",
+      "Bash(streamlit --version)",
+      "Bash(python3 -c \"print\\('ok'\\)\")",
+      "Bash(pip3 show *)",
+      "Bash(find /usr /opt ~/.local -name \"streamlit\" -type f 2>/dev/null | head -5; find ~ -name \"activate\" -path \"*/bin/activate\" 2>/dev/null | head -5)",
+      "Bash(pip show *)",
+      "Bash(~/.pyenv/shims/pip show *)"
+    ]
+  }
+}
