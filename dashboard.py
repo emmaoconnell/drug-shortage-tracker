@@ -737,10 +737,6 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         med_fill = float(top["avg_duration"].median())
         top["avg_duration"] = top["avg_duration"].fillna(med_fill).round(1)
 
-    # ── Reference-line positions (top-10 averages) ────────────────────────────
-    avg_x = float(top["market_share"].mean())
-    avg_y = float(top["avg_duration"].mean())
-
     # ── Axis ranges: generous padding for bubble overflow + labels ────────────
     x_max    = float(top["market_share"].max())
     y_max    = float(top["avg_duration"].max())
@@ -891,34 +887,6 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         text="Higher and further right indicates greater market share and longer shortage duration.",
         showarrow=False,
         font=dict(family=_FONT, size=10, color=T.text_muted),
-        bgcolor="rgba(0,0,0,0)",
-    ))
-
-    # ── Labeled reference lines ───────────────────────────────────────────────
-    ref_color = "rgba(150,150,150,0.45)"
-    ref_line  = dict(color=ref_color, width=1, dash="dash")
-
-    fig.add_shape(type="line", x0=x_lo, x1=x_hi, y0=avg_y, y1=avg_y, line=ref_line)
-    fig.add_shape(type="line", x0=avg_x, x1=avg_x, y0=y_lo, y1=y_hi, line=ref_line)
-
-    # Reference line labels (positioned near the plot edges)
-    ref_lbl_color = "rgba(130,130,130,0.85)"
-    annotations.append(dict(
-        xref="x", yref="y",
-        x=x_lo + (x_hi - x_lo) * 0.01, y=avg_y,
-        xanchor="left", yanchor="bottom",
-        text=f"Avg. Duration {avg_y:,.0f} days",
-        showarrow=False,
-        font=dict(family=_FONT, size=9, color=ref_lbl_color),
-        bgcolor="rgba(0,0,0,0)",
-    ))
-    annotations.append(dict(
-        xref="x", yref="y",
-        x=avg_x, y=y_hi - (y_hi - y_lo) * 0.01,
-        xanchor="left", yanchor="top",
-        text=f"Avg. Share {avg_x:.1f}%",
-        showarrow=False,
-        font=dict(family=_FONT, size=9, color=ref_lbl_color),
         bgcolor="rgba(0,0,0,0)",
     ))
 
