@@ -44,6 +44,18 @@ def _no_data_fig(msg: str = "No data available") -> None:
     return None  # blank-box sentinel — never renders a large empty Plotly frame
 
 
+def _truncate_label(text: str, max_len: int = 22) -> str:
+    """Shorten a label for y-axis display; full text goes in hover customdata."""
+    if len(text) <= max_len:
+        return text
+    # Try trimming at the last comma/semicolon/parenthesis before max_len
+    for sep in (",", ";", "(", " a ", " -"):
+        idx = text.find(sep)
+        if 0 < idx <= max_len:
+            return text[:idx].strip()
+    return text[:max_len - 1].strip() + "…"
+
+
 def _wrap_label(text: str, width: int = 34) -> str:
     words = text.split()
     lines, line, line_len = [], [], 0
@@ -188,14 +200,16 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     norm   = (top["count"] - top["count"].min()) / max(top["count"].max() - top["count"].min(), 1)
     colors = [f"rgba(26,86,219,{0.38 + 0.62 * float(v):.2f})" for v in norm]
 
-    left_margin = max(220, top["manufacturer"].str.len().max() * 7)
+    short_labels = top["manufacturer"].apply(_truncate_label)
+    left_margin  = max(160, short_labels.str.len().max() * 7)
     height = max(400, top_n * 36 + 80)
 
     fig = go.Figure(go.Bar(
-        x=top["count"], y=top["manufacturer"],
+        x=top["count"], y=short_labels,
         orientation="h",
         marker=dict(color=colors, line=dict(color=T.chart_bg, width=0.5)),
-        hovertemplate="<b>%{y}</b><br>Shortages: %{x:,}<extra></extra>",
+        hovertemplate="<b>%{customdata}</b><br>Shortages: %{x:,}<extra></extra>",
+        customdata=top["manufacturer"],
     ))
     layout = _base(f"Top {top_n} Manufacturers by Shortage Count", height=height,
                    margin=dict(t=64, b=90, l=left_margin, r=70))
@@ -328,24 +342,23 @@ def market_share_treemap(df: pd.DataFrame) -> go.Figure:
         for i in range(n)
     ]
 
+    short_labels = counts["manufacturer"].apply(_truncate_label)
     fig = go.Figure(go.Bar(
         x=counts["count"],
-        y=counts["manufacturer"],
+        y=short_labels,
         orientation="h",
         marker=dict(color=bar_colors, line=dict(width=0)),
         cliponaxis=False,
         hovertemplate=(
-            "<b>%{y}</b><br>"
+            "<b>%{customdata[0]}</b><br>"
             "Shortages: %{x:,}<br>"
-            "Share: %{customdata:.1f}%"
+            "Share: %{customdata[1]:.1f}%"
             "<extra></extra>"
         ),
-        customdata=counts["pct"],
+        customdata=list(zip(counts["manufacturer"], counts["pct"])),
     ))
 
-    # Longest manufacturer name determines left margin
-    max_name_len = counts["manufacturer"].str.len().max()
-    left_margin = min(320, max(180, max_name_len * 7))
+    left_margin = min(280, max(160, short_labels.str.len().max() * 7))
 
     fig.update_layout(
         paper_bgcolor=T.chart_bg,
@@ -756,6 +769,12 @@ def reason_bar(df: pd.DataFrame) -> go.Figure:
     row_h     = max(52, max_lines * 26)
     height    = max(340, len(counts) * row_h + 100)
 
+    # left margin based on longest single line in wrapped labels (not full label)
+    max_line_len = wrapped.apply(
+        lambda t: max(len(s) for s in t.split("<br>"))
+    ).max()
+    left_margin = min(260, max(140, max_line_len * 7))
+
     fig = go.Figure(go.Bar(
         x=counts["count"], y=wrapped,
         orientation="h",
@@ -764,7 +783,7 @@ def reason_bar(df: pd.DataFrame) -> go.Figure:
         customdata=counts["reason"],
     ))
     layout = _base("Top FDA-Classified Shortage Reasons", height=height,
-                   margin=dict(t=64, b=90, l=290, r=90))
+                   margin=dict(t=64, b=90, l=left_margin, r=90))
     layout["xaxis"].update(title="Shortage Count", showgrid=True)
     layout["yaxis"].update(tickfont=dict(family=_FONT, size=13, color=T.text_primary), autorange=True)
     fig.update_layout(**layout)

@@ -617,7 +617,18 @@ section[data-testid="stMain"] .stButton button[kind="primary"] {{
 }}
 @media (max-width: 420px) {{
     .kpi-row {{
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }}
+    .kpi-card {{
+        padding: 12px 14px;
+        border-radius: 14px;
+    }}
+    .kpi-card .kpi-value {{
+        font-size: 1.35rem !important;
+    }}
+    .kpi-card .kpi-label {{
+        font-size: 0.70rem !important;
     }}
 }}
 /* ── Forecast "Model Statistics" — auto-fit grid, up to 6 cards per row ── */
