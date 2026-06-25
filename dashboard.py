@@ -863,23 +863,12 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
                 borderpad=2,
             ))
 
-    # ── Subtitle ─────────────────────────────────────────────────────────────
+    # ── Colorbar title (just above the gradient top at y≈0.775) ─────────────
     annotations.append(dict(
         xref="paper", yref="paper",
-        x=0.5, y=1.065,
+        x=1.072, y=0.785,
         xanchor="center", yanchor="bottom",
-        text="Market Share vs. Average Shortage Duration · top 10 manufacturers",
-        showarrow=False,
-        font=dict(family=_FONT, size=11, color=T.text_muted),
-        bgcolor="rgba(0,0,0,0)",
-    ))
-
-    # ── Colorbar title (placed above gradient via annotation for spacing) ────
-    annotations.append(dict(
-        xref="paper", yref="paper",
-        x=1.072, y=0.84,
-        xanchor="center", yanchor="bottom",
-        text="Risk Score",
+        text="<b>Risk Score</b>",
         showarrow=False,
         font=dict(family=_FONT, size=11, color=_tick_color),
         bgcolor="rgba(0,0,0,0)",
@@ -905,7 +894,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         plot_bgcolor=T.chart_plot_bg,
         font=dict(family=_FONT, size=12, color=T.text_primary),
         title=dict(
-            text="Manufacturer Shortage Impact Landscape",
+            text="Top 10 Manufacturers by Shortage Impact",
             font=dict(family=_FONT, size=18, color=T.text_primary),
             x=0.5, xanchor="center",
             y=0.97, yanchor="top",
