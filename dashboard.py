@@ -589,15 +589,12 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     X = market share (%)  |  Y = avg shortage duration (days)
     Bubble size = unique drugs  |  Bubble color = risk score (0–100)
 
-    Clean consulting-slide design:
-    - Single markers-only trace (enables full colorscale + colorbar)
-    - All labels as Plotly annotations — full per-label control
-    - Large bubbles: white bold text centred inside, no arrow
-    - Small bubbles: dark text + hairline leader line, direction chosen by
-      Y-rank to minimise crossing and overlap
-    - Reference lines at TOP-10 averages (dashed, muted)
-    - Quadrant labels: 7px, 30% opacity — barely visible background cues
-    - Subtitle under title; no footer caption; no reading-guide box
+    Design:
+    - Semi-transparent bubbles (opacity 0.45) with thin white border
+    - Continuous vertical gradient colorbar (green→yellow→red) as legend
+    - Smart labels: large bubbles get centered text; small get offset annotations
+    - Labeled reference lines at top-10 averages
+    - Caption below chart
     """
     needed = {"shortage_count", "pct_current", "unique_drugs", "risk_score",
               "manufacturer", "current_count"}
@@ -605,15 +602,18 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         return _no_data_fig("No manufacturer risk data — fetch latest data")
     T = _T()
 
-    # ── Short display names ───────────────────────────────────────────────────
-    _SHORT = {
+    dark = T.name == "dark"
+
+    # ── Short display names (2-line where needed) ─────────────────────────────
+    _SHORT: dict[str, str] = {
         "hospira":                  "Hospira",
+        "fresenius kabi":           "Fresenius<br>Kabi",
         "fresenius":                "Fresenius",
-        "hikma":                    "Hikma",
-        "baxter":                   "Baxter",
+        "hikma":                    "Hikma<br>Pharma",
+        "baxter":                   "Baxter<br>Healthcare",
         "pfizer":                   "Pfizer",
         "teva":                     "Teva",
-        "eugia":                    "Eugia",
+        "eugia":                    "Eugia US",
         "sandoz":                   "Sandoz",
         "aurobindo":                "Aurobindo",
         "otsuka":                   "Otsuka ICU",
@@ -630,7 +630,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         "luitpold":                 "Luitpold",
         "sun pharma":               "Sun Pharma",
         "sun pharm":                "Sun Pharma",
-        "american regent":          "Am. Regent",
+        "american regent":          "American<br>Regent",
         "international medication": "Int'l Med.",
         "slayback":                 "Slayback",
         "novaplus":                 "NovaPlus",
@@ -642,11 +642,12 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
 
     def _shorten(name: str) -> str:
         low = name.lower()
-        for key, short in _SHORT.items():
+        # Longest keys first so "fresenius kabi" beats "fresenius"
+        for key in sorted(_SHORT, key=len, reverse=True):
             if key in low:
-                return short
-        trimmed = name.split(",")[0].split("(")[0].strip()
-        return trimmed if len(trimmed) <= 14 else trimmed[:13] + "…"
+                return _SHORT[key]
+        trimmed = shorten_manufacturer_name(name, max_len=12)
+        return trimmed
 
     # ── Top 10 by shortage count ──────────────────────────────────────────────
     top = risk_df.head(10).copy()
@@ -681,27 +682,47 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     avg_x = float(top["market_share"].mean())
     avg_y = float(top["avg_duration"].mean())
 
-    # ── Axis ranges: tight with ~12% padding ─────────────────────────────────
+    # ── Axis ranges: generous padding for bubble overflow + labels ────────────
     x_max    = float(top["market_share"].max())
     y_max    = float(top["avg_duration"].max())
     y_min    = float(top["avg_duration"].min())
     y_spread = max(y_max - y_min, 1.0)
-    x_range  = max(x_max, 1.0)
 
-    x_lo, x_hi = 0.0, x_max * 1.28          # extra padding for larger bubbles
-    y_lo = max(0.0, y_min - y_spread * 0.22)
-    y_hi = y_max + y_spread * 0.28
+    x_lo, x_hi = 0.0, x_max * 1.32
+    y_lo = max(0.0, y_min - y_spread * 0.25)
+    y_hi = y_max + y_spread * 0.32
 
     # ── Bubble sizing: diameter mode, largest ≈ 110px ────────────────────────
     max_drugs = float(top["unique_drugs"].max())
     sizeref   = max_drugs / 110.0
 
-    # ── Color: vivid 3-stop green → yellow → red ─────────────────────────────
+    # ── Color scale: green (low risk) → yellow → red (high risk) ─────────────
     color_scale = [
         [0.0, "#22C55E"],
         [0.5, "#FACC15"],
         [1.0, "#EF4444"],
     ]
+
+    # ── Colorbar styled as a vertical gradient legend ─────────────────────────
+    _cb_bg      = "rgba(31,41,55,0.0)"
+    _tick_color = "#CBD5E1" if dark else "#6B7280"
+    colorbar = dict(
+        title=dict(
+            text="Risk Score<br>(Impact)",
+            font=dict(family=_FONT, size=11, color=_tick_color),
+            side="right",
+        ),
+        tickvals=[0, 50, 100],
+        ticktext=["Low", "Med", "High"],
+        tickfont=dict(family=_FONT, size=11, color=_tick_color),
+        thickness=14,
+        len=0.55,
+        x=1.02,
+        y=0.5,
+        yanchor="middle",
+        outlinewidth=0,
+        bgcolor=_cb_bg,
+    )
 
     # ── Hover strings ─────────────────────────────────────────────────────────
     hover_texts = [
@@ -716,7 +737,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         for _, r in top.iterrows()
     ]
 
-    # ── Markers-only trace (labels via annotations for full control) ──────────
+    # ── Main bubble trace with colorbar legend ────────────────────────────────
     fig = go.Figure(go.Scatter(
         x=top["market_share"].tolist(),
         y=top["avg_duration"].tolist(),
@@ -725,69 +746,129 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
             size=top["unique_drugs"].tolist(),
             sizemode="diameter",
             sizeref=sizeref,
-            sizemin=14,
+            sizemin=18,
             color=top["risk_score"].tolist(),
             colorscale=color_scale,
             cmin=0.0,
             cmax=100.0,
-            line=dict(color="rgba(255,255,255,0.7)", width=1.5),
-            opacity=0.88,
-            showscale=False,
+            opacity=0.45,
+            line=dict(color="rgba(255,255,255,0.80)", width=1.8),
+            showscale=True,
+            colorbar=colorbar,
         ),
         hovertext=hover_texts,
         hoverinfo="text",
         showlegend=False,
     ))
 
-    # ── Discrete legend entries replacing the colorbar ────────────────────────
-    _leg_bg = "rgba(31,41,55,0.95)" if T.name == "dark" else "rgba(255,255,255,0.95)"
-    _leg_border = "#374151" if T.name == "dark" else "#D1D5DB"
-    for label, color in [("High", "#EF4444"), ("Medium", "#FACC15"), ("Low", "#22C55E")]:
-        fig.add_trace(go.Scatter(
-            x=[None], y=[None],
-            mode="markers",
-            marker=dict(size=10, color=color, symbol="circle"),
-            name=label,
-            showlegend=True,
-        ))
-
-    # ── Labels: every manufacturer centred inside its bubble ─────────────────
-    # Use font size 11 for names > 8 chars so longer names fit inside smaller bubbles.
+    # ── Per-bubble annotations with smart inside/outside placement ────────────
+    # Estimate rendered pixel diameter to decide inside vs. outside
     annotations: list[dict] = []
-    for _, row in top.iterrows():
-        x_pt = float(row["market_share"])
-        y_pt = float(row["avg_duration"])
-        name = str(row["short_name"])
-        font_size = 9 if len(name) > 8 else 11
-        annotations.append(dict(
-            x=x_pt, y=y_pt,
-            xref="x", yref="y",
-            xanchor="center", yanchor="middle",
-            text=f"<b>{name}</b>",
-            showarrow=False,
-            font=dict(family=_FONT, size=font_size, color=T.text_primary),
-            bgcolor="rgba(0,0,0,0)",
-            borderpad=0,
-        ))
+    for i, row in top.iterrows():
+        x_pt  = float(row["market_share"])
+        y_pt  = float(row["avg_duration"])
+        name  = str(row["short_name"])
+        drugs = float(row["unique_drugs"])
+        score = float(row["risk_score"])
 
-    # ── Subtitle — centred, two lines so it never clips the right edge ───────
+        # Pixel diameter approximation
+        px_diam = (drugs / max_drugs) ** 0.5 * 110 if max_drugs else 18
+        px_diam = max(px_diam, 18)
+
+        # Label fits inside if bubble is reasonably large
+        inside = px_diam >= 52
+
+        # Label color: white on dark/high-risk bubbles, near-black otherwise
+        if inside:
+            lbl_color = "white" if score > 40 else ("#111827" if not dark else "#F1F5F9")
+        else:
+            lbl_color = "#111827" if not dark else "#F1F5F9"
+
+        font_size = 10 if "<br>" in name or len(name.replace("<br>", " ")) > 10 else 11
+
+        if inside:
+            annotations.append(dict(
+                x=x_pt, y=y_pt,
+                xref="x", yref="y",
+                xanchor="center", yanchor="middle",
+                text=f"<b>{name}</b>",
+                showarrow=False,
+                font=dict(family=_FONT, size=font_size, color=lbl_color),
+                bgcolor="rgba(0,0,0,0)",
+                borderpad=0,
+            ))
+        else:
+            # Offset direction: alternate above/below by rank to reduce collisions
+            y_offset_frac = 0.06 * (y_hi - y_lo)
+            ay_dir = y_offset_frac if i % 2 == 0 else -y_offset_frac
+            annotations.append(dict(
+                x=x_pt, y=y_pt,
+                xref="x", yref="y",
+                ax=0, ay=-36 if ay_dir > 0 else 36,
+                xanchor="center", yanchor="bottom" if ay_dir > 0 else "top",
+                text=f"<b>{name}</b>",
+                showarrow=True,
+                arrowhead=0,
+                arrowwidth=1,
+                arrowcolor="rgba(150,150,150,0.5)",
+                font=dict(family=_FONT, size=font_size, color=lbl_color),
+                bgcolor="rgba(0,0,0,0)",
+                borderpad=2,
+            ))
+
+    # ── Subtitle ─────────────────────────────────────────────────────────────
     annotations.append(dict(
         xref="paper", yref="paper",
-        x=0.5, y=1.07,
+        x=0.5, y=1.065,
         xanchor="center", yanchor="bottom",
-        text=(
-            "Market Share vs. Average Shortage Duration<br>"
-            "among the 10 most impactful manufacturers"
-        ),
+        text="Market Share vs. Average Shortage Duration · top 10 manufacturers",
         showarrow=False,
         font=dict(family=_FONT, size=11, color=T.text_muted),
         bgcolor="rgba(0,0,0,0)",
     ))
 
-    # ── Average reference lines (unlabeled) ───────────────────────────────────
-    ref = dict(color=T.text_muted, width=0.8, dash="dot")
-    fig.add_shape(type="line", x0=x_lo,  x1=x_hi,  y0=avg_y, y1=avg_y, line=ref)
-    fig.add_shape(type="line", x0=avg_x, x1=avg_x, y0=y_lo,  y1=y_hi,  line=ref)
+    # ── Caption below chart ───────────────────────────────────────────────────
+    annotations.append(dict(
+        xref="paper", yref="paper",
+        x=0.5, y=-0.14,
+        xanchor="center", yanchor="top",
+        text="Higher and further right indicates greater market share and longer shortage duration.",
+        showarrow=False,
+        font=dict(family=_FONT, size=10, color=T.text_muted),
+        bgcolor="rgba(0,0,0,0)",
+    ))
+
+    # ── Labeled reference lines ───────────────────────────────────────────────
+    ref_color = "rgba(150,150,150,0.45)"
+    ref_line  = dict(color=ref_color, width=1, dash="dash")
+
+    fig.add_shape(type="line", x0=x_lo, x1=x_hi, y0=avg_y, y1=avg_y, line=ref_line)
+    fig.add_shape(type="line", x0=avg_x, x1=avg_x, y0=y_lo, y1=y_hi, line=ref_line)
+
+    # Reference line labels (positioned near the plot edges)
+    ref_lbl_color = "rgba(130,130,130,0.85)"
+    annotations.append(dict(
+        xref="x", yref="y",
+        x=x_lo + (x_hi - x_lo) * 0.01, y=avg_y,
+        xanchor="left", yanchor="bottom",
+        text=f"Avg. Duration {avg_y:,.0f} days",
+        showarrow=False,
+        font=dict(family=_FONT, size=9, color=ref_lbl_color),
+        bgcolor="rgba(0,0,0,0)",
+    ))
+    annotations.append(dict(
+        xref="x", yref="y",
+        x=avg_x, y=y_hi - (y_hi - y_lo) * 0.01,
+        xanchor="left", yanchor="top",
+        text=f"Avg. Share {avg_x:.1f}%",
+        showarrow=False,
+        font=dict(family=_FONT, size=9, color=ref_lbl_color),
+        bgcolor="rgba(0,0,0,0)",
+    ))
+
+    # ── Grid and axis styling ─────────────────────────────────────────────────
+    _grid_color  = "rgba(148,163,184,0.18)" if dark else "rgba(100,116,139,0.14)"
+    _axis_color  = "rgba(148,163,184,0.35)" if dark else "rgba(100,116,139,0.30)"
 
     fig.update_layout(
         paper_bgcolor=T.chart_bg,
@@ -800,45 +881,35 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
             y=0.97, yanchor="top",
         ),
         xaxis=dict(
-            title=dict(text="Market Share (%)", font=dict(size=13, color=T.text_muted),
-                       standoff=10),
-            tickfont=dict(size=11, color=T.text_muted),
+            title=dict(text="Market Share (%)", font=dict(size=12, color=T.text_muted), standoff=12),
+            tickfont=dict(size=10, color=T.text_muted),
             ticksuffix="%",
             range=[x_lo, x_hi],
-            showgrid=True, gridcolor=T.border, gridwidth=0.5,
+            showgrid=True, gridcolor=_grid_color, gridwidth=1,
             zeroline=False,
-            linecolor=T.border, linewidth=1, mirror=False,
+            linecolor=_axis_color, linewidth=1, mirror=False,
             fixedrange=True,
         ),
         yaxis=dict(
-            title=dict(text="Avg Shortage Duration (Days)",
-                       font=dict(size=13, color=T.text_muted), standoff=10),
-            tickfont=dict(size=11, color=T.text_muted),
+            title=dict(text="Average Shortage Duration (Days)",
+                       font=dict(size=12, color=T.text_muted), standoff=12),
+            tickfont=dict(size=10, color=T.text_muted),
             range=[y_lo, y_hi],
-            showgrid=True, gridcolor=T.border, gridwidth=0.5,
+            showgrid=True, gridcolor=_grid_color, gridwidth=1,
             zeroline=False,
-            linecolor=T.border, linewidth=1, mirror=False,
+            linecolor=_axis_color, linewidth=1, mirror=False,
             fixedrange=True,
         ),
-        showlegend=True,
-        legend=dict(
-            title=dict(text="Risk Score", font=dict(family=_FONT, size=12, color=T.text_primary)),
-            font=dict(family=_FONT, size=11, color=T.text_primary),
-            bgcolor=_leg_bg,
-            bordercolor=_leg_border,
-            borderwidth=1,
-            x=1.01, y=0.5, xanchor="left", yanchor="middle",
-        ),
+        showlegend=False,
         dragmode=False,
-        width=1020,
-        height=540,
-        margin=dict(t=130, b=90, l=76, r=120),
+        height=580,
+        margin=dict(t=120, b=100, l=80, r=110),
         annotations=annotations,
         hoverlabel=dict(
-            bgcolor="#1F2937" if T.name == "dark" else "#FFFFFF",
-            bordercolor="#374151" if T.name == "dark" else "#D1D5DB",
+            bgcolor="#1F2937" if dark else "#FFFFFF",
+            bordercolor="#374151" if dark else "#D1D5DB",
             font=dict(family=_FONT, size=13,
-                      color="#F9FAFB" if T.name == "dark" else "#111827"),
+                      color="#F9FAFB" if dark else "#111827"),
             namelength=-1,
         ),
     )
