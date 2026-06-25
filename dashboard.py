@@ -453,8 +453,12 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
         height = max(480, top_n * 28 + 160)
 
         fig.update_layout(barmode="group")
+        # t=140 gives room for: title (~20px) + gap (~20px) + legend (~30px) + gap (~20px)
         layout = _base("Shortage Status by Top Manufacturers", height=height,
-                       margin=dict(t=110, b=110, l=60, r=20), showlegend=True)
+                       margin=dict(t=140, b=110, l=60, r=20), showlegend=True)
+        layout["title"].update(
+            y=0.97, yanchor="top",   # pin title near the top of the figure
+        )
         layout["xaxis"].update(
             title="",
             tickangle=-35,
@@ -465,12 +469,12 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
             title="Shortage Count",
             tickfont=dict(family=_FONT, size=11, color=T.text_primary),
         )
-        # Legend centered below the title, above the plot area
+        # Legend centered in the gap between title and plot area
         layout["legend"].update(
             title_text="Status",
             font=dict(family=_FONT, size=11, color=T.text_primary),
             orientation="h",
-            yanchor="bottom", y=1.04,   # sits above plot, below the title band
+            yanchor="bottom", y=1.06,   # legend bottom sits just above the plot
             xanchor="center", x=0.5,
             bgcolor=_leg_bg, bordercolor=_leg_border, borderwidth=1,
         )

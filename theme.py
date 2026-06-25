@@ -631,33 +631,6 @@ section[data-testid="stMain"] .stButton button[kind="primary"] {{
         font-size: 0.70rem !important;
     }}
 }}
-/* ════════════════════════════════════
-   RESPONSIVE: Shortage Status chart
-   Desktop (>768px): show vertical layout, hide horizontal.
-   Mobile (≤768px):  show horizontal layout, hide vertical.
-   Each chart is preceded by a unique marker <span>. The :has() selector
-   targets the [data-testid="element-container"] that contains the marker,
-   then the immediately following sibling which wraps the Plotly chart.
-════════════════════════════════════ */
-
-/* Default (desktop): desktop chart visible, mobile chart hidden */
-[data-testid="element-container"]:has(.mfr-status-mobile-marker)
-  + [data-testid="element-container"] {{
-    display: none;
-}}
-
-/* On mobile/tablet (≤768px): flip visibility */
-@media (max-width: 768px) {{
-    [data-testid="element-container"]:has(.mfr-status-desktop-marker)
-      + [data-testid="element-container"] {{
-        display: none;
-    }}
-    [data-testid="element-container"]:has(.mfr-status-mobile-marker)
-      + [data-testid="element-container"] {{
-        display: block;
-    }}
-}}
-
 /* ── Forecast "Model Statistics" — auto-fit grid, up to 6 cards per row ── */
 .model-stats-grid {{
     display: grid;
