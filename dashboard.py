@@ -44,16 +44,74 @@ def _no_data_fig(msg: str = "No data available") -> None:
     return None  # blank-box sentinel — never renders a large empty Plotly frame
 
 
+_ABBREVS: list[tuple[str, str]] = [
+    # suffix-strip patterns FIRST (before generic word replacements fire)
+    (r",\s*a\s+Pfizer\s+Company\b",  ""),   # "…, a Pfizer Company" → ""
+    (r",\s*a\s+\w+\s+Company\b",    ""),    # "…, a XYZ Company" → ""
+    # word abbreviations — longer/more-specific before shorter
+    (r"\bPharmaceuticals\b",         "Pharma."),
+    (r"\bPharmaceutical\b",          "Pharma."),
+    (r"\bIncorporated\b",            "Inc."),
+    (r"\bHealthcare\b",              "HC"),
+    (r"\bUnited States\b",           "US"),
+    (r"\bLaboratories\b",            "Labs"),
+    (r"\bLaboratory\b",              "Lab"),
+    (r"\bInternational\b",           "Intl."),
+    (r"\bManufacturing\b",           "Mfg."),
+    (r"\bCorporation\b",             "Corp."),
+    (r"\bLimited\b",                 "Ltd."),
+    (r"\bCompany\b",                 "Co."),
+]
+
+import re as _re
+
+def shorten_label(text: str, max_chars: int = 24) -> str:
+    """Abbreviate and optionally wrap a y-axis label for mobile display.
+
+    Full original label should be passed separately to hover customdata.
+    """
+    s = text.strip()
+    for pattern, replacement in _ABBREVS:
+        s = _re.sub(pattern, replacement, s, flags=_re.IGNORECASE)
+    s = s.strip().rstrip(",").strip()
+
+    if len(s) <= max_chars:
+        return s
+
+    # Try splitting at the first comma if that gives a short enough first line
+    if "," in s:
+        part = s[:s.index(",")].strip()
+        rest = s[s.index(",") + 1:].strip()
+        if len(part) <= max_chars:
+            return part + "<br>" + (rest[:max_chars] if len(rest) <= max_chars else rest[:max_chars - 1] + "…")
+
+    # Word-wrap into 2 lines of max_chars each
+    words = s.split()
+    line1, line2 = [], []
+    cur_len = 0
+    split_done = False
+    for w in words:
+        if not split_done and cur_len + (1 if cur_len else 0) + len(w) > max_chars:
+            split_done = True
+            cur_len = len(w)
+            line2.append(w)
+        elif split_done:
+            line2.append(w)
+        else:
+            line1.append(w)
+            cur_len += (1 if cur_len else 0) + len(w)
+    l1 = " ".join(line1)
+    l2 = " ".join(line2)
+    if l2:
+        if len(l2) > max_chars:
+            l2 = l2[:max_chars - 1] + "…"
+        return l1 + "<br>" + l2
+    return l1[:max_chars - 1] + "…" if len(l1) > max_chars else l1
+
+
 def _truncate_label(text: str, max_len: int = 22) -> str:
-    """Shorten a label for y-axis display; full text goes in hover customdata."""
-    if len(text) <= max_len:
-        return text
-    # Try trimming at the last comma/semicolon/parenthesis before max_len
-    for sep in (",", ";", "(", " a ", " -"):
-        idx = text.find(sep)
-        if 0 < idx <= max_len:
-            return text[:idx].strip()
-    return text[:max_len - 1].strip() + "…"
+    """Legacy alias — prefer shorten_label for new call sites."""
+    return shorten_label(text, max_chars=max_len)
 
 
 def _wrap_label(text: str, width: int = 34) -> str:
@@ -200,8 +258,12 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     norm   = (top["count"] - top["count"].min()) / max(top["count"].max() - top["count"].min(), 1)
     colors = [f"rgba(26,86,219,{0.38 + 0.62 * float(v):.2f})" for v in norm]
 
-    short_labels = top["manufacturer"].apply(_truncate_label)
-    left_margin  = max(160, short_labels.str.len().max() * 7)
+    short_labels = top["manufacturer"].apply(shorten_label)
+    # left margin: longest single line in any multi-line label × ~7px/char, capped at 180
+    _max_line = short_labels.apply(
+        lambda t: max(len(s) for s in t.split("<br>"))
+    ).max()
+    left_margin = min(180, max(120, _max_line * 7))
     height = max(400, top_n * 36 + 80)
 
     fig = go.Figure(go.Bar(
@@ -342,7 +404,7 @@ def market_share_treemap(df: pd.DataFrame) -> go.Figure:
         for i in range(n)
     ]
 
-    short_labels = counts["manufacturer"].apply(_truncate_label)
+    short_labels = counts["manufacturer"].apply(shorten_label)
     fig = go.Figure(go.Bar(
         x=counts["count"],
         y=short_labels,
@@ -358,7 +420,10 @@ def market_share_treemap(df: pd.DataFrame) -> go.Figure:
         customdata=list(zip(counts["manufacturer"], counts["pct"])),
     ))
 
-    left_margin = min(280, max(160, short_labels.str.len().max() * 7))
+    _ms_max_line = short_labels.apply(
+        lambda t: max(len(s) for s in t.split("<br>"))
+    ).max()
+    left_margin = min(210, max(130, _ms_max_line * 7))
 
     fig.update_layout(
         paper_bgcolor=T.chart_bg,
@@ -761,22 +826,21 @@ def reason_bar(df: pd.DataFrame) -> go.Figure:
     counts.columns = ["reason", "count"]
     counts = counts.sort_values("count", ascending=True)
 
-    wrapped = counts["reason"].apply(_wrap_label)
+    short_reasons = counts["reason"].apply(lambda t: shorten_label(t, max_chars=28))
     norm    = (counts["count"] - counts["count"].min()) / max(counts["count"].max() - counts["count"].min(), 1)
     colors  = [f"rgba(220,38,38,{0.45 + 0.55 * float(v):.2f})" for v in norm]
 
-    max_lines = wrapped.apply(lambda t: t.count("<br>") + 1).max()
+    max_lines = short_reasons.apply(lambda t: t.count("<br>") + 1).max()
     row_h     = max(52, max_lines * 26)
     height    = max(340, len(counts) * row_h + 100)
 
-    # left margin based on longest single line in wrapped labels (not full label)
-    max_line_len = wrapped.apply(
+    max_line_len = short_reasons.apply(
         lambda t: max(len(s) for s in t.split("<br>"))
     ).max()
-    left_margin = min(260, max(140, max_line_len * 7))
+    left_margin = min(210, max(130, max_line_len * 7))
 
     fig = go.Figure(go.Bar(
-        x=counts["count"], y=wrapped,
+        x=counts["count"], y=short_reasons,
         orientation="h",
         marker=dict(color=colors, line=dict(color=T.chart_bg, width=0.6)),
         hovertemplate="<b>%{customdata}</b><br>%{x:,} shortages<extra></extra>",
