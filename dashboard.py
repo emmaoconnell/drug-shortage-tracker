@@ -361,11 +361,13 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     return fig
 
 
-def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12) -> go.Figure:
-    """Horizontal grouped bar chart — manufacturers on y-axis, status counts on x-axis.
+def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
+                                      mobile: bool = False) -> go.Figure:
+    """Grouped bar chart — Shortage Status by Top Manufacturers.
 
-    Horizontal layout prevents x-axis label cramping on mobile and makes
-    manufacturer names readable without rotation.
+    mobile=False (default): vertical bars, manufacturers on x-axis — suits desktop.
+    mobile=True: horizontal bars, manufacturers on y-axis — suits narrow screens.
+    Data, sorting, and colors are identical in both layouts.
     """
     if df.empty or "manufacturer" not in df.columns:
         return _no_data_fig("No manufacturer data")
@@ -381,51 +383,98 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12) -> go.Fi
         .pivot(index="manufacturer", columns="status", values="count")
         .fillna(0).reindex(top_names)
     )
-    # Sort by total shortage count descending (highest at top)
-    pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=True).index]
+    # Sort by total shortage count — ascending for horizontal (highest at top),
+    # descending for vertical (highest at left).
+    sorted_idx = pivot.sum(axis=1).sort_values(ascending=mobile).index
+    pivot = pivot.loc[sorted_idx]
 
     full_names  = pivot.index.tolist()
     short_names = [shorten_manufacturer_name(n) for n in full_names]
 
-    fig = go.Figure()
-    for status, color in STATUS_COLORS.items():
-        if status in pivot.columns:
-            vals = pivot[status].tolist()
-            hover = [
-                f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
-                for i in range(len(full_names))
-            ]
-            fig.add_trace(go.Bar(
-                name=status,
-                y=short_names,
-                x=vals,
-                orientation="h",
-                marker_color=color,
-                hovertemplate="%{customdata}<extra></extra>",
-                customdata=hover,
-            ))
-
-    _max_line = max(
-        max(len(s) for s in n.split("<br>")) for n in short_names
-    )
-    left_margin = min(140, max(90, _max_line * 7))
-    height = max(460, top_n * 44 + 100)
-
-    fig.update_layout(barmode="group")
-    layout = _base("Shortage Status by Top Manufacturers", height=height,
-                   margin=dict(t=64, b=70, l=left_margin, r=20), showlegend=True)
-    layout["xaxis"].update(title="Shortage Count",
-                           tickfont=dict(family=_FONT, size=11, color=T.text_primary))
-    layout["yaxis"].update(tickfont=dict(family=_FONT, size=11, color=T.text_primary),
-                           automargin=True)
-    _leg_bg = "rgba(31,41,55,0.95)" if T.name == "dark" else "rgba(255,255,255,0.95)"
+    _leg_bg     = "rgba(31,41,55,0.95)" if T.name == "dark" else "rgba(255,255,255,0.95)"
     _leg_border = "#374151" if T.name == "dark" else "#D1D5DB"
-    layout["legend"].update(
-        title_text="Status",
-        font=dict(family=_FONT, size=11, color=T.text_primary),
-        orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
-        bgcolor=_leg_bg, bordercolor=_leg_border, borderwidth=1,
-    )
+
+    fig = go.Figure()
+
+    if mobile:
+        # ── Horizontal layout (mobile) ─────────────────────────────────────
+        for status, color in STATUS_COLORS.items():
+            if status in pivot.columns:
+                vals  = pivot[status].tolist()
+                hover = [
+                    f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
+                    for i in range(len(full_names))
+                ]
+                fig.add_trace(go.Bar(
+                    name=status, y=short_names, x=vals, orientation="h",
+                    marker_color=color,
+                    hovertemplate="%{customdata}<extra></extra>",
+                    customdata=hover,
+                ))
+
+        _max_line   = max(max(len(s) for s in n.split("<br>")) for n in short_names)
+        left_margin = min(140, max(90, _max_line * 7))
+        height      = max(460, top_n * 44 + 100)
+
+        fig.update_layout(barmode="group")
+        layout = _base("Shortage Status by Top Manufacturers", height=height,
+                       margin=dict(t=100, b=50, l=left_margin, r=20), showlegend=True)
+        layout["xaxis"].update(title="Shortage Count",
+                               tickfont=dict(family=_FONT, size=11, color=T.text_primary))
+        layout["yaxis"].update(tickfont=dict(family=_FONT, size=11, color=T.text_primary),
+                               automargin=True)
+        layout["legend"].update(
+            title_text="Status",
+            font=dict(family=_FONT, size=11, color=T.text_primary),
+            orientation="h", yanchor="bottom", y=1.04, xanchor="left", x=0,
+            bgcolor=_leg_bg, bordercolor=_leg_border, borderwidth=1,
+        )
+
+    else:
+        # ── Vertical layout (desktop) ──────────────────────────────────────
+        # Flatten 2-line short names to single-line for x-axis tick labels
+        x_labels = [n.replace("<br>", " ") for n in short_names]
+
+        for status, color in STATUS_COLORS.items():
+            if status in pivot.columns:
+                vals  = pivot[status].tolist()
+                hover = [
+                    f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
+                    for i in range(len(full_names))
+                ]
+                fig.add_trace(go.Bar(
+                    name=status, x=x_labels, y=vals,
+                    marker_color=color,
+                    hovertemplate="%{customdata}<extra></extra>",
+                    customdata=hover,
+                ))
+
+        # Height proportional to label rotation + number of manufacturers
+        height = max(480, top_n * 28 + 160)
+
+        fig.update_layout(barmode="group")
+        layout = _base("Shortage Status by Top Manufacturers", height=height,
+                       margin=dict(t=110, b=110, l=60, r=20), showlegend=True)
+        layout["xaxis"].update(
+            title="",
+            tickangle=-35,
+            tickfont=dict(family=_FONT, size=11, color=T.text_primary),
+            automargin=True,
+        )
+        layout["yaxis"].update(
+            title="Shortage Count",
+            tickfont=dict(family=_FONT, size=11, color=T.text_primary),
+        )
+        # Legend centered below the title, above the plot area
+        layout["legend"].update(
+            title_text="Status",
+            font=dict(family=_FONT, size=11, color=T.text_primary),
+            orientation="h",
+            yanchor="bottom", y=1.04,   # sits above plot, below the title band
+            xanchor="center", x=0.5,
+            bgcolor=_leg_bg, bordercolor=_leg_border, borderwidth=1,
+        )
+
     fig.update_layout(**layout)
     return fig
 

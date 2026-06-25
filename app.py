@@ -780,7 +780,12 @@ elif page == "Manufacturers":
         plot(charts.manufacturer_heatmap(df, top_n=12), height=560)
 
     section("Shortage Composition by Manufacturer")
-    plot(charts.manufacturer_current_vs_resolved(df, top_n=14))
+    # Responsive: desktop shows vertical bars; mobile shows horizontal bars.
+    # CSS in theme.py hides one figure at each breakpoint via :has() selectors.
+    st.markdown('<span class="mfr-status-desktop-marker"></span>', unsafe_allow_html=True)
+    plot(charts.manufacturer_current_vs_resolved(df, top_n=14, mobile=False))
+    st.markdown('<span class="mfr-status-mobile-marker"></span>', unsafe_allow_html=True)
+    plot(charts.manufacturer_current_vs_resolved(df, top_n=14, mobile=True))
 
     section("Market Share Treemap")
     plot(charts.market_share_treemap(df))
