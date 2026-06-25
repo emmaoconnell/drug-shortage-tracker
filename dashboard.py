@@ -760,14 +760,13 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
 
     # ── Colorbar styled as a vertical gradient legend ─────────────────────────
     _cb_bg      = "rgba(31,41,55,0.0)"
-    # All non-bubble chart text: white in dark mode, near-black in light mode
-    _chart_text = "#F1F5F9" if dark else "#111827"
-    _tick_color = _chart_text
+    # All non-bubble chart text: pure white in dark mode, pure black in light mode
+    _chart_text = "#FFFFFF" if dark else "#000000"
     colorbar = dict(
         title=dict(text="", side="top"),
         tickvals=[0, 50, 100],
         ticktext=["Low", "Med", "High"],
-        tickfont=dict(family=_FONT, size=11, color=_tick_color),
+        tickfont=dict(family=_FONT, size=11, color=_chart_text),
         thickness=14,
         len=0.55,
         x=1.02,
@@ -872,7 +871,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         xanchor="center", yanchor="bottom",
         text="<b>Risk Score</b>",
         showarrow=False,
-        font=dict(family=_FONT, size=11, color=_tick_color),
+        font=dict(family=_FONT, size=11, color=_chart_text),
         bgcolor="rgba(0,0,0,0)",
     ))
 
@@ -933,6 +932,12 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
                       color="#F9FAFB" if dark else "#111827"),
             namelength=-1,
         ),
+    )
+    # Force colorbar tick color — Plotly ignores marker.colorbar.tickfont in some renderers
+    fig.update_traces(
+        marker_colorbar_tickfont_color=_chart_text,
+        marker_colorbar_tickfont_family=_FONT,
+        marker_colorbar_tickfont_size=11,
     )
     return fig
 
