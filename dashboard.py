@@ -987,20 +987,53 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 return v
         return name.split(",")[0].split("(")[0].strip()[:12]
 
-    top8 = top.nlargest(8, "shortage_count")
+    max_uq   = float(top["bubble_size"].max()) or 1.0
+    top8     = top.nlargest(8, "shortage_count").copy()
+
+    # Centroid of labeled points — used to push outside labels outward
+    cx = float(top8["shortage_count"].mean())
+    cy = float(top8["pct_current"].mean())
+    # Axis extents for normalising the direction vector
+    x_span = float(top["shortage_count"].max()) or 1.0
+    y_span = float(top["pct_current"].max()) or 1.0
+
     annotations = []
     for _, row in top8.iterrows():
-        annotations.append(dict(
-            x=float(row["shortage_count"]),
-            y=float(row["pct_current"]),
-            xref="x", yref="y",
-            xanchor="center", yanchor="middle",
-            text=f"<i>{_rs_short(str(row['manufacturer']))}</i>",
-            showarrow=False,
-            font=dict(family=_FONT, size=11, color="#4B5563"),
-            bgcolor="rgba(0,0,0,0)",
-            borderpad=0,
-        ))
+        xv     = float(row["shortage_count"])
+        yv     = float(row["pct_current"])
+        # Estimated pixel diameter (size_max=50 → max diameter ≈ 100 px)
+        px_diam = (float(row["bubble_size"]) / max_uq) ** 0.5 * 100
+        inside  = px_diam >= 52
+        label   = f"<i>{_rs_short(str(row['manufacturer']))}</i>"
+
+        if inside:
+            annotations.append(dict(
+                x=xv, y=yv, xref="x", yref="y",
+                xanchor="center", yanchor="middle",
+                text=label, showarrow=False,
+                font=dict(family=_FONT, size=11, color="#4B5563"),
+                bgcolor="rgba(0,0,0,0)", borderpad=0,
+            ))
+        else:
+            # Offset direction: away from the cluster centroid
+            dx  = (xv - cx) / x_span
+            dy  = (yv - cy) / y_span
+            mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
+            OFF = 50
+            ax  =  (dx / mag) * OFF          # positive → right
+            ay  = -(dy / mag) * OFF          # Plotly ay: positive → down
+            xanchor = "left"   if ax >  8 else ("right"  if ax < -8 else "center")
+            yanchor = "bottom" if ay < -8 else ("top"    if ay >  8 else "middle")
+            annotations.append(dict(
+                x=xv, y=yv, xref="x", yref="y",
+                ax=ax, ay=ay,
+                xanchor=xanchor, yanchor=yanchor,
+                text=label, showarrow=True,
+                arrowhead=0, arrowwidth=1,
+                arrowcolor="rgba(150,150,150,0.45)",
+                font=dict(family=_FONT, size=11, color="#4B5563"),
+                bgcolor="rgba(0,0,0,0)", borderpad=2,
+            ))
 
     layout = _base("Manufacturer Risk Matrix  (bubble = unique drugs affected)", height=460,
                    margin=dict(t=64, b=90, l=64, r=24))
