@@ -1711,106 +1711,102 @@ elif page == "Cause Analysis":
     )
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Breakdown chart ───────────────────────────────────────────────────────
+    # ── "What's Inside 'Other'?" insight card ────────────────────────────────
     section("What's Inside 'Other'?")
+
+    # Build sub-reason counts (same logic as the frequency table below)
+    _sub_counts = (
+        edf["mfr_reason"]
+        .replace("", "Not further specified")
+        .value_counts()
+        .reset_index()
+    )
+    _sub_counts.columns = ["sub_reason", "count"]
+    _sub_counts["pct"] = (_sub_counts["count"] / other_count * 100).round(1)
+
+    _no_detail   = int(_sub_counts.loc[_sub_counts["sub_reason"] == "Not further specified", "count"].sum())
+    _no_detail_p = round(_no_detail / other_count * 100, 1) if other_count else 0.0
+    _specified   = _sub_counts[_sub_counts["sub_reason"] != "Not further specified"]
+    _top_reason  = _specified.iloc[0] if not _specified.empty else None
+    _top_name    = str(_top_reason["sub_reason"]) if _top_reason is not None else "None"
+    _top_count   = int(_top_reason["count"])      if _top_reason is not None else 0
+    _top_pct     = float(_top_reason["pct"])      if _top_reason is not None else 0.0
+
+    # Dynamic insight sentence
+    if _top_reason is not None:
+        _insight = (
+            f"Most shortage records categorised as <em>Other</em> do not include a "
+            f"manufacturer-provided explanation ({_no_detail_p}%). "
+            f"Among records with additional detail, "
+            f"<strong>{_top_name}</strong> is the primary reported sub-reason "
+            f"({_top_count:,} records, {_top_pct}% of Other)."
+        )
+    else:
+        _insight = (
+            f"None of the {other_count:,} <em>Other</em> records contain a "
+            f"manufacturer-provided sub-reason in the <code>related_info</code> field."
+        )
+
+    _card_bg    = "#1E2132" if _dark else "#FFFFFF"
+    _card_bdr   = "rgba(255,255,255,0.10)" if _dark else "#E2E8F0"
+    _hd_color   = "#F1F5F9" if _dark else "#0F172A"
+    _sub_color  = "#94A3B8" if _dark else "#64748B"
+    _ins_bg     = "#252842" if _dark else "#F8FAFC"
+    _ins_bdr    = "rgba(255,255,255,0.08)" if _dark else "#E2E8F0"
+    _ins_color  = "#CBD5E1" if _dark else "#334155"
+
+    # KPI block builder (inline, no theme dependency)
+    def _insight_kpi(label: str, count: int, pct: float, accent: str) -> str:
+        _val_color = "#F1F5F9" if _dark else "#0F172A"
+        _lbl_color = "#94A3B8" if _dark else "#64748B"
+        _pct_color = accent
+        return f"""
+        <div style="flex:1;min-width:160px;background:{'rgba(255,255,255,0.05)' if _dark else '#F8FAFC'};
+             border:1px solid {_card_bdr};border-top:3px solid {accent};
+             border-radius:12px;padding:16px 20px;">
+          <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.06em;
+               text-transform:uppercase;color:{_lbl_color};margin-bottom:6px">{label}</div>
+          <div style="font-size:1.75rem;font-weight:700;color:{_val_color};
+               line-height:1.1;margin-bottom:4px">{count:,}</div>
+          <div style="font-size:0.85rem;font-weight:600;color:{_pct_color}">{pct}% of "Other"</div>
+        </div>"""
+
+    _kpi_no_detail = _insight_kpi("Not further specified", _no_detail, _no_detail_p, "#64748B")
+    _kpi_top       = _insight_kpi(_top_name, _top_count, _top_pct, "#D97706") if _top_reason else ""
+
     st.markdown(
-        f"<p style='font-size:0.83rem;color:{_T.text_muted};margin:-8px 0 14px'>Sub-reasons extracted from "
-        f"the <code style='background:{_code_bg};color:{_code_text};border:1px solid {_code_border};"
-        f"padding:1px 5px;border-radius:3px'>related_info</code> free-text field "
-        f"('Shortage per Manufacturer: ...'). "
-        "Records without this pattern are grouped as <em>Not further specified</em>.</p>",
+        f"""
+        <div style="background:{_card_bg};border:1px solid {_card_bdr};
+             border-radius:16px;padding:24px 28px;margin-bottom:8px">
+
+          <!-- Header -->
+          <p style="margin:0 0 4px;font-size:0.75rem;font-weight:600;letter-spacing:0.07em;
+             text-transform:uppercase;color:{_sub_color}">
+            Sub-reasons extracted from the <code style="background:{'#1F2937' if _dark else '#EFF6FF'};
+            color:{'#93C5FD' if _dark else '#1E3A5F'};padding:1px 4px;border-radius:3px">related_info</code> field
+          </p>
+          <h3 style="margin:0 0 20px;font-size:1.1rem;font-weight:700;color:{_hd_color}">
+            Records without a parsed reason are grouped as <em>Not further specified</em>.
+          </h3>
+
+          <!-- KPI row -->
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+            {_kpi_no_detail}
+            {_kpi_top}
+          </div>
+
+          <!-- Insight -->
+          <div style="background:{_ins_bg};border:1px solid {_ins_bdr};border-left:3px solid #D97706;
+               border-radius:8px;padding:14px 18px">
+            <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+                 color:#D97706;margin-bottom:6px">Key Insight</div>
+            <p style="margin:0;font-size:0.88rem;line-height:1.65;color:{_ins_color}">{_insight}</p>
+          </div>
+
+        </div>
+        """,
         unsafe_allow_html=True,
     )
-
-    sub_col, avail_col = st.columns([3, 2])
-    T = theme.get()
-
-    with sub_col:
-        # Manufacturer sub-reason frequency
-        sub_counts = (
-            edf["mfr_reason"]
-            .replace("", "Not further specified")
-            .value_counts()
-            .head(20)
-            .reset_index()
-        )
-        sub_counts.columns = ["sub_reason", "count"]
-        sub_counts["pct"] = (sub_counts["count"] / other_count * 100).round(1)
-        sub_counts = sub_counts.sort_values("count", ascending=True)
-
-        norm   = (sub_counts["count"] - sub_counts["count"].min()) / max(sub_counts["count"].max() - sub_counts["count"].min(), 1)
-        colors = [
-            "#94A3B8" if r == "Not further specified"
-            else f"rgba(185,28,28,{0.40 + 0.60 * float(n):.2f})"
-            for r, n in zip(sub_counts["sub_reason"], norm)
-        ]
-        height = max(260, len(sub_counts) * 48 + 80)
-        import plotly.graph_objects as _go
-        fig_sub = _go.Figure(_go.Bar(
-            x=sub_counts["count"],
-            y=sub_counts["sub_reason"],
-            orientation="h",
-            marker=dict(color=colors, line=dict(color="white", width=0.5)),
-            text=[f"{c}  ({p}%)" for c, p in zip(sub_counts["count"], sub_counts["pct"])],
-            textposition="outside",
-            textfont=dict(size=11, color="#0F2B5B", family="Inter, system-ui, sans-serif"),
-            hovertemplate="<b>%{y}</b><br>%{x:,} records (%{customdata}%)<extra></extra>",
-            customdata=sub_counts["pct"],
-        ))
-        fig_sub.update_layout(
-            title=dict(text="Manufacturer-Reported Sub-Reasons within 'Other'",
-                       font=dict(family="Inter, system-ui, sans-serif", size=18, color=T.text_primary), x=0),
-            plot_bgcolor=T.chart_plot_bg, paper_bgcolor=T.chart_bg,
-            xaxis=dict(title="Record Count", tickfont=dict(color=T.text_primary, size=11),
-                       title_font=dict(color=T.text_primary, size=13), showgrid=True, gridcolor=T.border),
-            yaxis=dict(tickfont=dict(color=T.text_primary, size=11)),
-            font=dict(family="Inter, system-ui, sans-serif", size=12, color=T.text_primary),
-            margin=dict(t=56, b=90, l=220, r=100),
-            dragmode=False,
-        )
-        plot(fig_sub, height=520)
-
-    with avail_col:
-        # Availability breakdown
-        avail_counts = (
-            edf["availability"]
-            .replace("", "Not Reported")
-            .value_counts()
-            .reset_index()
-        )
-        avail_counts.columns = ["availability", "count"]
-        avail_colors = {
-            "Unavailable":        "#C81E1E",
-            "Limited Availability":"#B45309",
-            "Available":          "#057A55",
-            "Not Reported":       "#94A3B8",
-        }
-        fig_av = _go.Figure(_go.Bar(
-            x=avail_counts["availability"],
-            y=avail_counts["count"],
-            marker=dict(
-                color=[avail_colors.get(a, "#64748B") for a in avail_counts["availability"]],
-                line=dict(color="white", width=0.5),
-            ),
-            text=avail_counts["count"],
-            textposition="outside",
-            textfont=dict(size=11, color="#0F2B5B", family="Inter, system-ui, sans-serif"),
-            hovertemplate="<b>%{x}</b><br>%{y:,} records<extra></extra>",
-        ))
-        fig_av.update_layout(
-            title=dict(text="Drug Availability Status",
-                       font=dict(family="Inter, system-ui, sans-serif", size=18, color=T.text_primary), x=0),
-            plot_bgcolor=T.chart_plot_bg, paper_bgcolor=T.chart_bg,
-            xaxis=dict(tickfont=dict(color=T.text_primary, size=11)),
-            yaxis=dict(title="Count", tickfont=dict(color=T.text_primary, size=11),
-                       title_font=dict(color=T.text_primary, size=13),
-                       showgrid=True, gridcolor=T.border, rangemode="tozero"),
-            font=dict(family="Inter, system-ui, sans-serif", size=12, color=T.text_primary),
-            margin=dict(t=56, b=90, l=52, r=20),
-            showlegend=False,
-            dragmode=False,
-        )
-        plot(fig_av, height=520)
 
     # ── Frequency table ───────────────────────────────────────────────────────
     section("Sub-Reason Frequency Table (Top 20)")
