@@ -987,26 +987,75 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 return v
         return name.split(",")[0].split("(")[0].strip()[:12]
 
-    max_uq   = float(top["bubble_size"].max()) or 1.0
-    top8     = top.nlargest(8, "shortage_count").copy()
+    max_uq = float(top["bubble_size"].max()) or 1.0
+    top10  = top.nlargest(10, "shortage_count").copy()
 
-    # Centroid of labeled points — used to push outside labels outward
-    cx = float(top8["shortage_count"].mean())
-    cy = float(top8["pct_current"].mean())
-    # Axis extents for normalising the direction vector
+    # Centroid of labeled set — used for initial outward push direction
+    cx = float(top10["shortage_count"].mean())
+    cy = float(top10["pct_current"].mean())
     x_span = float(top["shortage_count"].max()) or 1.0
     y_span = float(top["pct_current"].max()) or 1.0
 
-    annotations = []
-    for _, row in top8.iterrows():
-        xv     = float(row["shortage_count"])
-        yv     = float(row["pct_current"])
-        # Estimated pixel diameter (size_max=50 → max diameter ≈ 100 px)
+    # Approximate plot-area pixel size (layout height=460, margins t=64 b=90 l=64 r=24)
+    PLOT_W, PLOT_H = 490, 306
+    x_lo, x_hi = 0.0, x_span * 1.15
+    y_lo, y_hi = 0.0, y_span * 1.20
+
+    def _to_px(xv: float, yv: float):
+        px = (xv - x_lo) / (x_hi - x_lo) * PLOT_W
+        py = PLOT_H - (yv - y_lo) / (y_hi - y_lo) * PLOT_H
+        return px, py
+
+    # ── Pass 1: classify inside vs outside, compute initial label positions ───
+    items: list[dict] = []
+    for _, row in top10.iterrows():
+        xv      = float(row["shortage_count"])
+        yv      = float(row["pct_current"])
         px_diam = (float(row["bubble_size"]) / max_uq) ** 0.5 * 100
         inside  = px_diam >= 52
-        label   = f"<i>{_rs_short(str(row['manufacturer']))}</i>"
+        dx = (xv - cx) / x_span
+        dy = (yv - cy) / y_span
+        mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
+        OFF = 58
+        ax0 =  (dx / mag) * OFF
+        ay0 = -(dy / mag) * OFF   # Plotly ay: positive = down in screen
+        bx, by = _to_px(xv, yv)
+        items.append({
+            "xv": xv, "yv": yv, "bx": bx, "by": by,
+            "lx": bx + ax0, "ly": by + ay0,
+            "ax": ax0, "ay": ay0,
+            "inside": inside,
+            "label": f"<i>{_rs_short(str(row['manufacturer']))}</i>",
+        })
 
-        if inside:
+    # ── Pass 2: iterative repulsion for outside labels ────────────────────────
+    LBL_W, LBL_H = 54, 15        # approximate label bounding box in pixels
+    MIN_X, MIN_Y = LBL_W * 0.90, LBL_H * 1.35
+    outside = [it for it in items if not it["inside"]]
+    for _ in range(25):
+        for i in range(len(outside)):
+            for j in range(i + 1, len(outside)):
+                dlx = outside[i]["lx"] - outside[j]["lx"]
+                dly = outside[i]["ly"] - outside[j]["ly"]
+                if abs(dlx) < MIN_X and abs(dly) < MIN_Y:
+                    ox = (MIN_X - abs(dlx)) / 2 * (1 if dlx >= 0 else -1)
+                    oy = (MIN_Y - abs(dly)) / 2 * (1 if dly >= 0 else -1)
+                    outside[i]["lx"] += ox;  outside[i]["ly"] += oy
+                    outside[j]["lx"] -= ox;  outside[j]["ly"] -= oy
+        PAD = 22
+        for it in outside:
+            it["lx"] = max(PAD, min(PLOT_W - PAD, it["lx"]))
+            it["ly"] = max(PAD, min(PLOT_H - PAD, it["ly"]))
+    # Recompute ax/ay from settled positions
+    for it in outside:
+        it["ax"] = it["lx"] - it["bx"]
+        it["ay"] = it["ly"] - it["by"]
+
+    # ── Build annotations ─────────────────────────────────────────────────────
+    annotations = []
+    for it in items:
+        xv, yv, label = it["xv"], it["yv"], it["label"]
+        if it["inside"]:
             annotations.append(dict(
                 x=xv, y=yv, xref="x", yref="y",
                 xanchor="center", yanchor="middle",
@@ -1015,13 +1064,7 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 bgcolor="rgba(0,0,0,0)", borderpad=0,
             ))
         else:
-            # Offset direction: away from the cluster centroid
-            dx  = (xv - cx) / x_span
-            dy  = (yv - cy) / y_span
-            mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
-            OFF = 50
-            ax  =  (dx / mag) * OFF          # positive → right
-            ay  = -(dy / mag) * OFF          # Plotly ay: positive → down
+            ax, ay = it["ax"], it["ay"]
             xanchor = "left"   if ax >  8 else ("right"  if ax < -8 else "center")
             yanchor = "bottom" if ay < -8 else ("top"    if ay >  8 else "middle")
             annotations.append(dict(
