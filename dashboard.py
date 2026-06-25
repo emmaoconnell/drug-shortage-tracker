@@ -821,11 +821,28 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     _x_span = max(x_hi - x_lo, 1e-9)
     _y_span = max(y_hi - y_lo, 1e-9)
 
+    # Per-manufacturer forced (ax, ay, xanchor, yanchor) to keep problem labels
+    # inside the plot area or restore a preferred placement.
+    # ax: px right (+) / left (−)   ay: px down (+) / up (−)
+    _BUBBLE_FORCED: dict[str, tuple] = {
+        "icu medical":  ( 38, -32, "left",   "bottom"),  # up-right, stays inside
+        "aurobindo":    ( 36,  36, "left",   "top"),     # down-right, below the bubble
+        "lannett":      (  0, -40, "center", "bottom"),  # straight up (original style)
+    }
+
+    def _forced_bubble(short_name: str, mfr: str) -> tuple | None:
+        key_src = (short_name + " " + mfr).lower()
+        for key, val in _BUBBLE_FORCED.items():
+            if key in key_src:
+                return val
+        return None
+
     annotations: list[dict] = []
     for i, row in top.iterrows():
         x_pt  = float(row["market_share"])
         y_pt  = float(row["avg_duration"])
         name  = str(row["short_name"])
+        mfr   = str(row["manufacturer"])
         drugs = float(row["unique_drugs"])
 
         px_diam = (drugs / max_drugs) ** 0.5 * 110 if max_drugs else 18
@@ -847,15 +864,19 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
                 borderpad=0,
             ))
         else:
-            # Direction from centroid → bubble, normalised to chart aspect ratio
-            dx = (x_pt - _cx) / _x_span
-            dy = (y_pt - _cy) / _y_span
-            mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
-            OFF = 48
-            ax =  (dx / mag) * OFF          # positive = right
-            ay = -(dy / mag) * OFF          # Plotly ay: positive = down
-            xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
-            yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
+            forced = _forced_bubble(name, mfr)
+            if forced:
+                ax, ay, xanchor, yanchor = forced
+            else:
+                # Direction from centroid → bubble, normalised to chart aspect ratio
+                dx = (x_pt - _cx) / _x_span
+                dy = (y_pt - _cy) / _y_span
+                mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
+                OFF = 48
+                ax =  (dx / mag) * OFF
+                ay = -(dy / mag) * OFF
+                xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
+                yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
             annotations.append(dict(
                 x=x_pt, y=y_pt,
                 xref="x", yref="y",
@@ -919,7 +940,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         showlegend=False,
         dragmode=False,
         height=580,
-        margin=dict(t=70, b=60, l=90, r=110),
+        margin=dict(t=70, b=100, l=90, r=110),
         annotations=annotations,
         hoverlabel=dict(
             bgcolor="#1F2937" if dark else "#FFFFFF",
