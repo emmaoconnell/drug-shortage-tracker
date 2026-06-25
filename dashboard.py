@@ -760,7 +760,9 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
 
     # ── Colorbar styled as a vertical gradient legend ─────────────────────────
     _cb_bg      = "rgba(31,41,55,0.0)"
-    _tick_color = "#CBD5E1" if dark else "#6B7280"
+    # All non-bubble chart text: white in dark mode, near-black in light mode
+    _chart_text = "#F1F5F9" if dark else "#111827"
+    _tick_color = _chart_text
     colorbar = dict(
         title=dict(text="", side="top"),
         tickvals=[0, 50, 100],
@@ -881,7 +883,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         xanchor="center", yanchor="top",
         text="Higher and further right indicates greater market share and longer shortage duration.",
         showarrow=False,
-        font=dict(family=_FONT, size=10, color=T.text_muted),
+        font=dict(family=_FONT, size=10, color=_chart_text),
         bgcolor="rgba(0,0,0,0)",
     ))
 
@@ -892,16 +894,16 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     fig.update_layout(
         paper_bgcolor=T.chart_bg,
         plot_bgcolor=T.chart_plot_bg,
-        font=dict(family=_FONT, size=12, color=T.text_primary),
+        font=dict(family=_FONT, size=12, color=_chart_text),
         title=dict(
             text="Top 10 Manufacturers by Shortage Impact",
-            font=dict(family=_FONT, size=18, color=T.text_primary),
+            font=dict(family=_FONT, size=18, color=_chart_text),
             x=0.5, xanchor="center",
             y=0.97, yanchor="top",
         ),
         xaxis=dict(
-            title=dict(text="Market Share (%)", font=dict(size=12, color=T.text_muted), standoff=12),
-            tickfont=dict(size=10, color=T.text_muted),
+            title=dict(text="Market Share (%)", font=dict(size=12, color=_chart_text), standoff=12),
+            tickfont=dict(size=10, color=_chart_text),
             ticksuffix="%",
             range=[x_lo, x_hi],
             showgrid=True, gridcolor=_grid_color, gridwidth=1,
@@ -911,8 +913,8 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         ),
         yaxis=dict(
             title=dict(text="Average Shortage Duration (Days)",
-                       font=dict(size=12, color=T.text_muted), standoff=12),
-            tickfont=dict(size=10, color=T.text_muted),
+                       font=dict(size=12, color=_chart_text), standoff=12),
+            tickfont=dict(size=10, color=_chart_text),
             range=[y_lo, y_hi],
             showgrid=True, gridcolor=_grid_color, gridwidth=1,
             zeroline=False,
