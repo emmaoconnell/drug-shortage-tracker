@@ -763,9 +763,9 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     _tick_color = "#CBD5E1" if dark else "#6B7280"
     colorbar = dict(
         title=dict(
-            text="Risk Score<br>(Impact)",
+            text="Risk Score",
             font=dict(family=_FONT, size=11, color=_tick_color),
-            side="right",
+            side="top",
         ),
         tickvals=[0, 50, 100],
         ticktext=["Low", "Med", "High"],
