@@ -1096,7 +1096,29 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 bgcolor="rgba(0,0,0,0)", borderpad=2,
             ))
 
-    layout = _base("Manufacturer Risk Matrix  (bubble = unique drugs affected)", height=460,
+    # ── Bubble-size legend box (bottom-right, inside plot area) ──────────────
+    _box_bg     = "rgba(249,250,251,0.93)" if not T.is_dark() else "rgba(31,41,55,0.88)"
+    _box_border = "rgba(209,213,219,0.85)" if not T.is_dark() else "rgba(75,85,99,0.65)"
+    _box_text   = T.text_muted
+    annotations.append(dict(
+        xref="paper", yref="paper",
+        x=0.99, y=0.02,
+        xanchor="right", yanchor="bottom",
+        text=(
+            "<b style='font-size:10px'>Bubble Size</b>"
+            "<br><span style='font-size:10px'>Number of unique</span>"
+            "<br><span style='font-size:10px'>drugs affected</span>"
+        ),
+        showarrow=False,
+        font=dict(family=_FONT, size=10, color=_box_text),
+        bgcolor=_box_bg,
+        bordercolor=_box_border,
+        borderwidth=1,
+        borderpad=7,
+        align="left",
+    ))
+
+    layout = _base("Manufacturer Risk Matrix", height=460,
                    margin=dict(t=64, b=90, l=64, r=24))
     layout["xaxis"].update(title="Total Shortage Count")
     layout["yaxis"].update(title="% Currently Active Shortages")
