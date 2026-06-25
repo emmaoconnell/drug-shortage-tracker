@@ -5,6 +5,7 @@ All charts pull colors from theme.get() so light/dark mode works automatically.
 Every text element >= 12 px; titles >= 16 px bold. WCAG-AA compliant.
 """
 
+import re as _re
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -44,6 +45,88 @@ def _no_data_fig(msg: str = "No data available") -> None:
     return None  # blank-box sentinel — never renders a large empty Plotly frame
 
 
+# ── Manufacturer-specific label shortener (more aggressive than shorten_label) ──
+_MFR_STRIP_SUFFIXES = _re.compile(
+    r",?\s*\b(LLC|LLP|LP|PC|PLC|NV|BV|AG|GmbH|SA|SAS|SRL|SRO)\b"
+    r"|,?\s*\ba\s+\w+\s+Company\b"           # ", a Pfizer Company"
+    r"|,?\s*\bIncorporated\b"
+    r"|,?\s*\bInc\."                          # "Inc." — no trailing \b (dot is non-word)
+    r"|,?\s*\bLimited\b"
+    r"|,?\s*\bLtd\."                          # "Ltd."
+    r"|,?\s*\bCorporation\b"
+    r"|,?\s*\bCorp\."                         # "Corp." — before bare Corp to avoid Corp\b issues
+    r"|,?\s*\bCo\."                           # "Co." — dot required so "Company" is safe
+    r"|\bUSA\b|\bU\.S\.A\.\b|\bU\.S\.\b"
+    r"|,?\s*\bInstitutional\b"
+    r"|,?\s*\bPharmacies\b",
+    _re.IGNORECASE,
+)
+# After suffix strip, clean any orphaned whitespace / trailing commas / dots
+_MFR_CLEANUP = _re.compile(r"\s*\.\s*$|,\s*$|\s{2,}")
+_MFR_ABBREVS: list[tuple[str, str]] = [
+    (r"\bPharmaceuticals\b",  "Pharma."),
+    (r"\bPharmaceutical\b",   "Pharma."),
+    (r"\bHealthcare\b",       "HC"),
+    (r"\bMedical\b",          "Med."),
+    (r"\bInternational\b",    "Intl."),
+    (r"\bLaboratories\b",     "Labs"),
+    (r"\bLaboratory\b",       "Lab"),
+    (r"\bManufacturing\b",    "Mfg."),
+    (r"\bCompany\b",          "Co."),
+    (r"\bIncorporated\b",     ""),
+]
+
+def shorten_manufacturer_name(name: str, max_len: int = 14) -> str:
+    """Aggressively shorten a manufacturer name for tight y-axis / x-axis labels.
+
+    Full original name must be passed to Plotly customdata for hover text.
+    """
+    s = name.strip()
+    # Strip noisy legal suffixes first
+    s = _MFR_STRIP_SUFFIXES.sub("", s)
+    # Clean orphaned trailing dots / commas / extra spaces left by suffix removal
+    s = _MFR_CLEANUP.sub(lambda m: " " if m.group().strip() == "" else "", s).strip().strip(",").strip()
+    # Apply abbreviations
+    for pattern, repl in _MFR_ABBREVS:
+        s = _re.sub(pattern, repl, s, flags=_re.IGNORECASE)
+    s = s.strip().strip(",").strip()
+    if not s:
+        s = name.strip()  # fallback to original if we stripped everything
+
+    if len(s) <= max_len:
+        return s
+
+    # Split at comma → two lines
+    if "," in s:
+        p1 = s[:s.index(",")].strip()
+        p2 = s[s.index(",") + 1:].strip()
+        if len(p1) <= max_len:
+            p2_short = (p2[:max_len - 1] + "…") if len(p2) > max_len else p2
+            return p1 + "<br>" + p2_short
+
+    # Word-wrap into 2 lines
+    words = s.split()
+    l1, l2, cur = [], [], 0
+    split = False
+    for w in words:
+        if not split and cur + (1 if cur else 0) + len(w) > max_len:
+            split = True
+            l2.append(w)
+            cur = len(w)
+        elif split:
+            l2.append(w)
+        else:
+            l1.append(w)
+            cur += (1 if cur else 0) + len(w)
+    line1 = " ".join(l1)
+    line2 = " ".join(l2)
+    if line2:
+        if len(line2) > max_len:
+            line2 = line2[:max_len - 1] + "…"
+        return line1 + "<br>" + line2
+    return line1[:max_len - 1] + "…"
+
+
 _ABBREVS: list[tuple[str, str]] = [
     # suffix-strip patterns FIRST (before generic word replacements fire)
     (r",\s*a\s+Pfizer\s+Company\b",  ""),   # "…, a Pfizer Company" → ""
@@ -62,8 +145,6 @@ _ABBREVS: list[tuple[str, str]] = [
     (r"\bLimited\b",                 "Ltd."),
     (r"\bCompany\b",                 "Co."),
 ]
-
-import re as _re
 
 def shorten_label(text: str, max_chars: int = 24) -> str:
     """Abbreviate and optionally wrap a y-axis label for mobile display.
@@ -258,12 +339,11 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     norm   = (top["count"] - top["count"].min()) / max(top["count"].max() - top["count"].min(), 1)
     colors = [f"rgba(26,86,219,{0.38 + 0.62 * float(v):.2f})" for v in norm]
 
-    short_labels = top["manufacturer"].apply(shorten_label)
-    # left margin: longest single line in any multi-line label × ~7px/char, capped at 180
+    short_labels = top["manufacturer"].apply(shorten_manufacturer_name)
     _max_line = short_labels.apply(
         lambda t: max(len(s) for s in t.split("<br>"))
     ).max()
-    left_margin = min(180, max(120, _max_line * 7))
+    left_margin = min(140, max(90, _max_line * 7))
     height = max(400, top_n * 36 + 80)
 
     fig = go.Figure(go.Bar(
@@ -282,6 +362,11 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
 
 
 def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12) -> go.Figure:
+    """Horizontal grouped bar chart — manufacturers on y-axis, status counts on x-axis.
+
+    Horizontal layout prevents x-axis label cramping on mobile and makes
+    manufacturer names readable without rotation.
+    """
     if df.empty or "manufacturer" not in df.columns:
         return _no_data_fig("No manufacturer data")
     T = _T()
@@ -296,27 +381,49 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12) -> go.Fi
         .pivot(index="manufacturer", columns="status", values="count")
         .fillna(0).reindex(top_names)
     )
+    # Sort by total shortage count descending (highest at top)
+    pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=True).index]
+
+    full_names  = pivot.index.tolist()
+    short_names = [shorten_manufacturer_name(n) for n in full_names]
 
     fig = go.Figure()
     for status, color in STATUS_COLORS.items():
         if status in pivot.columns:
+            vals = pivot[status].tolist()
+            hover = [
+                f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
+                for i in range(len(full_names))
+            ]
             fig.add_trace(go.Bar(
-                name=status, x=pivot.index.tolist(), y=pivot[status].tolist(),
+                name=status,
+                y=short_names,
+                x=vals,
+                orientation="h",
                 marker_color=color,
-                hovertemplate=f"<b>%{{x}}</b><br>{status}: %{{y:,}}<extra></extra>",
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=hover,
             ))
+
+    _max_line = max(
+        max(len(s) for s in n.split("<br>")) for n in short_names
+    )
+    left_margin = min(140, max(90, _max_line * 7))
+    height = max(460, top_n * 44 + 100)
+
     fig.update_layout(barmode="group")
-    layout = _base("Shortage Status by Top Manufacturers", height=420,
-                   margin=dict(t=64, b=140, l=60, r=20), showlegend=True)
-    layout["xaxis"].update(title="", tickangle=-30,
-                           tickfont=dict(family=_FONT, size=10, color=T.text_primary))
-    layout["yaxis"].update(title="Shortage Count")
+    layout = _base("Shortage Status by Top Manufacturers", height=height,
+                   margin=dict(t=64, b=70, l=left_margin, r=20), showlegend=True)
+    layout["xaxis"].update(title="Shortage Count",
+                           tickfont=dict(family=_FONT, size=11, color=T.text_primary))
+    layout["yaxis"].update(tickfont=dict(family=_FONT, size=11, color=T.text_primary),
+                           automargin=True)
     _leg_bg = "rgba(31,41,55,0.95)" if T.name == "dark" else "rgba(255,255,255,0.95)"
     _leg_border = "#374151" if T.name == "dark" else "#D1D5DB"
     layout["legend"].update(
         title_text="Status",
         font=dict(family=_FONT, size=11, color=T.text_primary),
-        x=0.85, y=0.98, xanchor="right", yanchor="top",
+        orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0,
         bgcolor=_leg_bg, bordercolor=_leg_border, borderwidth=1,
     )
     fig.update_layout(**layout)
@@ -345,9 +452,17 @@ def manufacturer_heatmap(df: pd.DataFrame, top_n: int = 12) -> go.Figure:
         for c in pivot.columns
     ]
 
+    full_names  = pivot.index.tolist()
+    short_names = [shorten_manufacturer_name(n) for n in full_names]
+    # Build hover text matrix using full manufacturer names
+    hover_text  = [
+        [f"<b>{full_names[r]}</b><br>{pivot.columns[c]}: {pivot.values[r, c]:,}"
+         for c in range(len(pivot.columns))]
+        for r in range(len(full_names))
+    ]
+
     z      = pivot.values
     maxval = z.max() or 1
-    text_c = [["white" if v / maxval > 0.45 else T.text_primary for v in row] for row in z]
 
     colorscale = (
         [[0, "#0F2B5B"], [0.6, "#3B82F6"], [1, "#EFF6FF"]]
@@ -355,11 +470,12 @@ def manufacturer_heatmap(df: pd.DataFrame, top_n: int = 12) -> go.Figure:
         [[0, "#EFF6FF"], [0.4, "#3B82F6"], [1, "#0F2B5B"]]
     )
     fig = go.Figure(go.Heatmap(
-        z=z, x=pivot.columns.tolist(), y=pivot.index.tolist(),
+        z=z, x=pivot.columns.tolist(), y=short_names,
         colorscale=colorscale,
         text=z, texttemplate="%{text}",
         textfont=dict(size=11, family=_FONT),
-        hovertemplate="<b>%{y}</b><br>%{x}: %{z:,}<extra></extra>",
+        hovertemplate="%{customdata}<extra></extra>",
+        customdata=hover_text,
         showscale=True,
         colorbar=dict(
             title=dict(text="Count", font=dict(size=13, color=T.text_primary, family=_FONT)),
@@ -367,7 +483,11 @@ def manufacturer_heatmap(df: pd.DataFrame, top_n: int = 12) -> go.Figure:
             thickness=14, len=0.85,
         ),
     ))
-    left_margin = max(240, max(len(n) for n in pivot.index) * 7)
+    # margin: longest single line of any short name × 7px, capped at 140
+    _hm_max_line = max(
+        max(len(s) for s in n.split("<br>")) for n in short_names
+    )
+    left_margin = min(140, max(90, _hm_max_line * 7))
     height = max(380, top_n * 42 + 80)
     layout = _base("Shortage Volume Heatmap", height=height,
                    margin=dict(t=64, b=110, l=left_margin, r=80))
@@ -404,7 +524,7 @@ def market_share_treemap(df: pd.DataFrame) -> go.Figure:
         for i in range(n)
     ]
 
-    short_labels = counts["manufacturer"].apply(shorten_label)
+    short_labels = counts["manufacturer"].apply(shorten_manufacturer_name)
     fig = go.Figure(go.Bar(
         x=counts["count"],
         y=short_labels,
@@ -423,7 +543,7 @@ def market_share_treemap(df: pd.DataFrame) -> go.Figure:
     _ms_max_line = short_labels.apply(
         lambda t: max(len(s) for s in t.split("<br>"))
     ).max()
-    left_margin = min(210, max(130, _ms_max_line * 7))
+    left_margin = min(140, max(90, _ms_max_line * 7))
 
     fig.update_layout(
         paper_bgcolor=T.chart_bg,
