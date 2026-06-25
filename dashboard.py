@@ -778,11 +778,8 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         # Label fits inside if bubble is reasonably large
         inside = px_diam >= 52
 
-        # Label color: white on dark/high-risk bubbles, near-black otherwise
-        if inside:
-            lbl_color = "white" if score > 40 else ("#111827" if not dark else "#F1F5F9")
-        else:
-            lbl_color = "#111827" if not dark else "#F1F5F9"
+        # Always use black labels for readability across all bubble colors
+        lbl_color = "#111827"
 
         font_size = 10 if "<br>" in name or len(name.replace("<br>", " ")) > 10 else 11
 
