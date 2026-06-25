@@ -829,7 +829,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         # Label fits inside if bubble is reasonably large
         inside = px_diam >= 52
 
-        lbl_color = "#4B5563"
+        lbl_color = "#D1D5DB" if dark else "#4B5563"
 
         font_size = 10 if "<br>" in name or len(name.replace("<br>", " ")) > 10 else 11
 
@@ -1070,6 +1070,7 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
         it["ay"] = it["ly"] - it["by"]
 
     # ── Build annotations ─────────────────────────────────────────────────────
+    _lbl_color = "#D1D5DB" if _theme.is_dark() else "#4B5563"
     annotations = []
     for it in items:
         xv, yv, label = it["xv"], it["yv"], it["label"]
@@ -1078,7 +1079,7 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 x=xv, y=yv, xref="x", yref="y",
                 xanchor="center", yanchor="middle",
                 text=label, showarrow=False,
-                font=dict(family=_FONT, size=11, color="#4B5563"),
+                font=dict(family=_FONT, size=11, color=_lbl_color),
                 bgcolor="rgba(0,0,0,0)", borderpad=0,
             ))
         else:
@@ -1092,7 +1093,7 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 text=label, showarrow=True,
                 arrowhead=0, arrowwidth=1,
                 arrowcolor="rgba(150,150,150,0.45)",
-                font=dict(family=_FONT, size=11, color="#4B5563"),
+                font=dict(family=_FONT, size=11, color=_lbl_color),
                 bgcolor="rgba(0,0,0,0)", borderpad=2,
             ))
 
