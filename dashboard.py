@@ -762,11 +762,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     _cb_bg      = "rgba(31,41,55,0.0)"
     _tick_color = "#CBD5E1" if dark else "#6B7280"
     colorbar = dict(
-        title=dict(
-            text="Risk Score",
-            font=dict(family=_FONT, size=11, color=_tick_color),
-            side="top",
-        ),
+        title=dict(text="", side="top"),
         tickvals=[0, 50, 100],
         ticktext=["Low", "Med", "High"],
         tickfont=dict(family=_FONT, size=11, color=_tick_color),
@@ -875,6 +871,17 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         text="Market Share vs. Average Shortage Duration · top 10 manufacturers",
         showarrow=False,
         font=dict(family=_FONT, size=11, color=T.text_muted),
+        bgcolor="rgba(0,0,0,0)",
+    ))
+
+    # ── Colorbar title (placed above gradient via annotation for spacing) ────
+    annotations.append(dict(
+        xref="paper", yref="paper",
+        x=1.072, y=0.84,
+        xanchor="center", yanchor="bottom",
+        text="Risk Score",
+        showarrow=False,
+        font=dict(family=_FONT, size=11, color=_tick_color),
         bgcolor="rgba(0,0,0,0)",
     ))
 
