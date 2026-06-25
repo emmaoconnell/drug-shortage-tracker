@@ -854,12 +854,27 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     else:
         _ocx, _ocy = _PW / 2, _PH / 2
 
+    # Explicit (ax, ay, xanchor, yanchor) for pairs that the centroid push
+    # would place on the same side.  ax>0=right, ay>0=down (Plotly screen coords).
+    _OVERLAP_OVERRIDES: dict[str, tuple] = {
+        "pfizer": ( 34,  34, "left",   "top"),     # lower-right
+        "teva":   (-34, -34, "right",  "bottom"),  # upper-left
+    }
+
+    def _override(mfr_name: str) -> tuple | None:
+        low = mfr_name.lower()
+        for key, val in _OVERLAP_OVERRIDES.items():
+            if key in low:
+                return val
+        return None
+
     # ── Per-bubble annotations ────────────────────────────────────────────────
     annotations: list[dict] = []
     for idx, (i, row) in enumerate(top.iterrows()):
         x_pt  = float(row["market_share"])
         y_pt  = float(row["avg_duration"])
         name  = str(row["short_name"])
+        mfr   = str(row["manufacturer"])
         drugs = float(row["unique_drugs"])
         bub   = _bubbles[idx]
 
@@ -879,15 +894,19 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
                 borderpad=0,
             ))
         else:
-            # Push label outward from the local overlap centroid
-            ddx = bub["sx"] - _ocx
-            ddy = bub["sy"] - _ocy
-            mag = (ddx ** 2 + ddy ** 2) ** 0.5 or 1.0
-            OFF = bub["r"] + 20          # just beyond the bubble edge
-            ax  =  (ddx / mag) * OFF
-            ay  = -(ddy / mag) * OFF     # Plotly ay: positive = down
-            xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
-            yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
+            ov = _override(mfr)
+            if ov:
+                ax, ay, xanchor, yanchor = ov
+            else:
+                # Push outward from the local overlap centroid
+                ddx = bub["sx"] - _ocx
+                ddy = bub["sy"] - _ocy
+                mag = (ddx ** 2 + ddy ** 2) ** 0.5 or 1.0
+                OFF = bub["r"] + 20
+                ax  =  (ddx / mag) * OFF
+                ay  = -(ddy / mag) * OFF   # Plotly ay: positive = down
+                xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
+                yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
             annotations.append(dict(
                 x=x_pt, y=y_pt,
                 xref="x", yref="y",
