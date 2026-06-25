@@ -825,9 +825,9 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     # inside the plot area or restore a preferred placement.
     # ax: px right (+) / left (−)   ay: px down (+) / up (−)
     _BUBBLE_FORCED: dict[str, tuple] = {
-        "icu medical":  ( 38, -32, "left",   "bottom"),  # up-right, stays inside
-        "aurobindo":    ( 36,  36, "left",   "top"),     # down-right, below the bubble
-        "lannett":      (  0, -40, "center", "bottom"),  # straight up (original style)
+        "icu medical":  ( 32, -38, "left",   "bottom"),  # above-right diagonal
+        "aurobindo":    (  0, -42, "center", "bottom"),  # straight up
+        "lannett":      (  0,  40, "center", "top"),     # straight down (lower-left feel, short)
     }
 
     def _forced_bubble(short_name: str, mfr: str) -> tuple | None:
@@ -918,7 +918,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
             y=0.97, yanchor="top",
         ),
         xaxis=dict(
-            title=dict(text="Market Share (%)", font=dict(size=12, color=_chart_text), standoff=12),
+            title=dict(text="Market Share (%)", font=dict(size=12, color=_chart_text), standoff=24),
             tickfont=dict(size=10, color=_chart_text),
             ticksuffix="%",
             range=[x_lo, x_hi],
