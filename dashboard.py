@@ -813,27 +813,95 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         showlegend=False,
     ))
 
-    # ── Per-bubble annotations — all labels centered on their bubble, no leader lines ──
+    # ── Overlap detection: find bubbles whose circles overlap > 50% ──────────
+    # Approximate pixel coords (plot area ≈ 470 × 410 px after margins)
+    _PW, _PH = 470, 410
+
+    def _to_screen(xv: float, yv: float) -> tuple[float, float]:
+        sx = (xv - x_lo) / (x_hi - x_lo) * _PW
+        sy = _PH - (yv - y_lo) / (y_hi - y_lo) * _PH
+        return sx, sy
+
+    _bubbles = []
+    for _, row in top.iterrows():
+        xv    = float(row["market_share"])
+        yv    = float(row["avg_duration"])
+        drugs = float(row["unique_drugs"])
+        # Pixel radius mirrors the Plotly trace exactly:
+        #   sizemode="diameter", sizeref = max_drugs / 110
+        #   → rendered diameter = drugs / sizeref = drugs * 110 / max_drugs  (linear)
+        #   → radius = drugs * 55 / max_drugs   (sizemin=18 → min radius 9)
+        r = max((drugs / max_drugs) * 55 if max_drugs else 9, 9)
+        sx, sy = _to_screen(xv, yv)
+        _bubbles.append({"xv": xv, "yv": yv, "sx": sx, "sy": sy, "r": r,
+                          "name": str(row["short_name"]),
+                          "drugs": drugs})
+
+    # Mark any bubble that overlaps >50% with at least one neighbour
+    _overlapping: set[int] = set()
+    for _a in range(len(_bubbles)):
+        for _b in range(_a + 1, len(_bubbles)):
+            _ba, _bb = _bubbles[_a], _bubbles[_b]
+            _dist = ((_ba["sx"] - _bb["sx"]) ** 2 + (_ba["sy"] - _bb["sy"]) ** 2) ** 0.5
+            if _dist < 0.5 * (_ba["r"] + _bb["r"]):
+                _overlapping.add(_a)
+                _overlapping.add(_b)
+
+    # Centroid of overlapping set → push their labels outward from it
+    if _overlapping:
+        _ocx = sum(_bubbles[k]["sx"] for k in _overlapping) / len(_overlapping)
+        _ocy = sum(_bubbles[k]["sy"] for k in _overlapping) / len(_overlapping)
+    else:
+        _ocx, _ocy = _PW / 2, _PH / 2
+
+    # ── Per-bubble annotations ────────────────────────────────────────────────
     annotations: list[dict] = []
-    for i, row in top.iterrows():
+    for idx, (i, row) in enumerate(top.iterrows()):
         x_pt  = float(row["market_share"])
         y_pt  = float(row["avg_duration"])
         name  = str(row["short_name"])
         drugs = float(row["unique_drugs"])
+        bub   = _bubbles[idx]
 
         lbl_color = "#D1D5DB" if dark else "#4B5563"
         font_size = 10 if "<br>" in name or len(name.replace("<br>", " ")) > 10 else 11
 
-        annotations.append(dict(
-            x=x_pt, y=y_pt,
-            xref="x", yref="y",
-            xanchor="center", yanchor="middle",
-            text=f"<i>{name}</i>",
-            showarrow=False,
-            font=dict(family=_FONT, size=font_size, color=lbl_color),
-            bgcolor="rgba(0,0,0,0)",
-            borderpad=0,
-        ))
+        if idx not in _overlapping:
+            # Label sits directly on the bubble — no arrow
+            annotations.append(dict(
+                x=x_pt, y=y_pt,
+                xref="x", yref="y",
+                xanchor="center", yanchor="middle",
+                text=f"<i>{name}</i>",
+                showarrow=False,
+                font=dict(family=_FONT, size=font_size, color=lbl_color),
+                bgcolor="rgba(0,0,0,0)",
+                borderpad=0,
+            ))
+        else:
+            # Push label outward from the local overlap centroid
+            ddx = bub["sx"] - _ocx
+            ddy = bub["sy"] - _ocy
+            mag = (ddx ** 2 + ddy ** 2) ** 0.5 or 1.0
+            OFF = bub["r"] + 20          # just beyond the bubble edge
+            ax  =  (ddx / mag) * OFF
+            ay  = -(ddy / mag) * OFF     # Plotly ay: positive = down
+            xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
+            yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
+            annotations.append(dict(
+                x=x_pt, y=y_pt,
+                xref="x", yref="y",
+                ax=ax, ay=ay,
+                xanchor=xanchor, yanchor=yanchor,
+                text=f"<i>{name}</i>",
+                showarrow=True,
+                arrowhead=0,
+                arrowwidth=1,
+                arrowcolor="rgba(150,150,150,0.5)",
+                font=dict(family=_FONT, size=font_size, color=lbl_color),
+                bgcolor="rgba(0,0,0,0)",
+                borderpad=2,
+            ))
 
     # ── Colorbar title (just above the gradient top at y≈0.775) ─────────────
     annotations.append(dict(
