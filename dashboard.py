@@ -1097,8 +1097,8 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
             ))
 
     # ── Bubble-size legend box (bottom-right, inside plot area) ──────────────
-    _box_bg     = "rgba(249,250,251,0.93)" if not T.is_dark() else "rgba(31,41,55,0.88)"
-    _box_border = "rgba(209,213,219,0.85)" if not T.is_dark() else "rgba(75,85,99,0.65)"
+    _box_bg     = "rgba(249,250,251,0.93)" if not _theme.is_dark() else "rgba(31,41,55,0.88)"
+    _box_border = "rgba(209,213,219,0.85)" if not _theme.is_dark() else "rgba(75,85,99,0.65)"
     _box_text   = T.text_muted
     annotations.append(dict(
         xref="paper", yref="paper",
