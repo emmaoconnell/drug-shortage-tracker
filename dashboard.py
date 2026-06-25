@@ -987,12 +987,25 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
                 return v
         return name.split(",")[0].split("(")[0].strip()[:12]
 
+    # Forced (ax, ay) pixel overrides for specific manufacturers applied before
+    # the repulsion pass — use to anchor problem labels to a clean direction.
+    _FORCED_AX_AY: dict[str, tuple[float, float]] = {
+        "aurobindo": (-52.0, 30.0),   # lower-left: avoids crossing rightward callouts
+    }
+
+    def _forced_offset(name: str) -> tuple[float, float] | None:
+        low = name.lower()
+        for key, val in _FORCED_AX_AY.items():
+            if key in low:
+                return val
+        return None
+
     max_uq = float(top["bubble_size"].max()) or 1.0
-    top10  = top.nlargest(10, "shortage_count").copy()
+    top11  = top.nlargest(11, "shortage_count").copy()
 
     # Centroid of labeled set — used for initial outward push direction
-    cx = float(top10["shortage_count"].mean())
-    cy = float(top10["pct_current"].mean())
+    cx = float(top11["shortage_count"].mean())
+    cy = float(top11["pct_current"].mean())
     x_span = float(top["shortage_count"].max()) or 1.0
     y_span = float(top["pct_current"].max()) or 1.0
 
@@ -1008,24 +1021,29 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
 
     # ── Pass 1: classify inside vs outside, compute initial label positions ───
     items: list[dict] = []
-    for _, row in top10.iterrows():
+    for _, row in top11.iterrows():
         xv      = float(row["shortage_count"])
         yv      = float(row["pct_current"])
+        mfr     = str(row["manufacturer"])
         px_diam = (float(row["bubble_size"]) / max_uq) ** 0.5 * 100
         inside  = px_diam >= 52
-        dx = (xv - cx) / x_span
-        dy = (yv - cy) / y_span
-        mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
-        OFF = 58
-        ax0 =  (dx / mag) * OFF
-        ay0 = -(dy / mag) * OFF   # Plotly ay: positive = down in screen
+        forced  = _forced_offset(mfr)
+        if forced:
+            ax0, ay0 = forced
+        else:
+            dx = (xv - cx) / x_span
+            dy = (yv - cy) / y_span
+            mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
+            OFF = 58
+            ax0 =  (dx / mag) * OFF
+            ay0 = -(dy / mag) * OFF   # Plotly ay: positive = down in screen
         bx, by = _to_px(xv, yv)
         items.append({
             "xv": xv, "yv": yv, "bx": bx, "by": by,
             "lx": bx + ax0, "ly": by + ay0,
             "ax": ax0, "ay": ay0,
             "inside": inside,
-            "label": f"<i>{_rs_short(str(row['manufacturer']))}</i>",
+            "label": f"<i>{_rs_short(mfr)}</i>",
         })
 
     # ── Pass 2: iterative repulsion for outside labels ────────────────────────
