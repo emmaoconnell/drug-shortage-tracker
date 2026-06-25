@@ -814,24 +814,25 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     ))
 
     # ── Per-bubble annotations with smart inside/outside placement ────────────
-    # Estimate rendered pixel diameter to decide inside vs. outside
+    # Centroid of all 10 points — outside labels fan away from it so arrows
+    # radiate outward and don't cross each other.
+    _cx = float(top["market_share"].mean())
+    _cy = float(top["avg_duration"].mean())
+    _x_span = max(x_hi - x_lo, 1e-9)
+    _y_span = max(y_hi - y_lo, 1e-9)
+
     annotations: list[dict] = []
     for i, row in top.iterrows():
         x_pt  = float(row["market_share"])
         y_pt  = float(row["avg_duration"])
         name  = str(row["short_name"])
         drugs = float(row["unique_drugs"])
-        score = float(row["risk_score"])
 
-        # Pixel diameter approximation
         px_diam = (drugs / max_drugs) ** 0.5 * 110 if max_drugs else 18
         px_diam = max(px_diam, 18)
-
-        # Label fits inside if bubble is reasonably large
         inside = px_diam >= 52
 
         lbl_color = "#D1D5DB" if dark else "#4B5563"
-
         font_size = 10 if "<br>" in name or len(name.replace("<br>", " ")) > 10 else 11
 
         if inside:
@@ -846,14 +847,20 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
                 borderpad=0,
             ))
         else:
-            # Offset direction: alternate above/below by rank to reduce collisions
-            y_offset_frac = 0.06 * (y_hi - y_lo)
-            ay_dir = y_offset_frac if i % 2 == 0 else -y_offset_frac
+            # Direction from centroid → bubble, normalised to chart aspect ratio
+            dx = (x_pt - _cx) / _x_span
+            dy = (y_pt - _cy) / _y_span
+            mag = (dx ** 2 + dy ** 2) ** 0.5 or 1.0
+            OFF = 48
+            ax =  (dx / mag) * OFF          # positive = right
+            ay = -(dy / mag) * OFF          # Plotly ay: positive = down
+            xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
+            yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
             annotations.append(dict(
                 x=x_pt, y=y_pt,
                 xref="x", yref="y",
-                ax=0, ay=-36 if ay_dir > 0 else 36,
-                xanchor="center", yanchor="bottom" if ay_dir > 0 else "top",
+                ax=ax, ay=ay,
+                xanchor=xanchor, yanchor=yanchor,
                 text=f"<i>{name}</i>",
                 showarrow=True,
                 arrowhead=0,
@@ -872,17 +879,6 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         text="<b>Risk Score</b>",
         showarrow=False,
         font=dict(family=_FONT, size=11, color=_chart_text),
-        bgcolor="rgba(0,0,0,0)",
-    ))
-
-    # ── Caption below chart ───────────────────────────────────────────────────
-    annotations.append(dict(
-        xref="paper", yref="paper",
-        x=0.5, y=-0.14,
-        xanchor="center", yanchor="top",
-        text="Higher and further right indicates greater market share and longer shortage duration.",
-        showarrow=False,
-        font=dict(family=_FONT, size=10, color=_chart_text),
         bgcolor="rgba(0,0,0,0)",
     ))
 
@@ -912,7 +908,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         ),
         yaxis=dict(
             title=dict(text="Average Shortage Duration (Days)",
-                       font=dict(size=12, color=_chart_text), standoff=12),
+                       font=dict(size=12, color=_chart_text), standoff=28),
             tickfont=dict(size=10, color=_chart_text),
             range=[y_lo, y_hi],
             showgrid=True, gridcolor=_grid_color, gridwidth=1,
@@ -923,7 +919,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         showlegend=False,
         dragmode=False,
         height=580,
-        margin=dict(t=70, b=100, l=80, r=110),
+        margin=dict(t=70, b=60, l=90, r=110),
         annotations=annotations,
         hoverlabel=dict(
             bgcolor="#1F2937" if dark else "#FFFFFF",
