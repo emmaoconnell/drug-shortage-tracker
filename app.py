@@ -331,11 +331,11 @@ def page_header(title: str, subtitle: str, badge: str = "") -> None:
 with st.sidebar:
     st.markdown(
         """
-        <div style="padding:8px 0 20px">
-          <div style="font-size:1.4rem;font-weight:800;color:white;letter-spacing:-0.5px">
+        <div style="padding:12px 0 28px">
+          <div style="font-size:2.4rem;font-weight:800;color:white;letter-spacing:0.02em;line-height:1.1">
             RxSignal
           </div>
-          <div style="font-size:0.72rem;color:#93C5FD;font-weight:500;margin-top:2px">
+          <div style="font-size:0.72rem;color:#93C5FD;font-weight:500;margin-top:8px;letter-spacing:0.08em">
             DRUG SHORTAGE INTELLIGENCE
           </div>
         </div>

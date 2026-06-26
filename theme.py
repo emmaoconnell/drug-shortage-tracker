@@ -243,7 +243,7 @@ header[data-testid="stHeader"] button,
     cursor: pointer !important;
     transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease !important;
     background: transparent !important;
-    color: {T.text_sidebar} !important;
+    color: #D5DBE8 !important;
     font-size: 0.97rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.01em !important;
