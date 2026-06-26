@@ -207,8 +207,7 @@ header[data-testid="stHeader"] button,
     border-right: 1px solid {T.border_sidebar};
 }}
 [data-testid="stSidebar"] p,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div {{
+[data-testid="stSidebar"] span {{
     color: {T.text_sidebar} !important;
 }}
 [data-testid="stSidebar"] h1,
@@ -289,8 +288,9 @@ header[data-testid="stHeader"] button,
                 0 2px 8px rgba(0,0,0,0.30) !important;
 }}
 
-/* Inner text inherits from label */
-[data-testid="stSidebar"] .stRadio > div label [data-testid="stMarkdownContainer"] p {{
+/* Inner text — must beat the broad sidebar p rule */
+[data-testid="stSidebar"] .stRadio > div label [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] .stRadio > div label span {{
     font-size: 0.97rem !important;
     font-weight: inherit !important;
     color: inherit !important;
