@@ -1091,29 +1091,35 @@ def reason_bar(df: pd.DataFrame) -> go.Figure:
     if meaningful.empty or meaningful.nunique() < 3:
         return top_drugs_bar(df)
 
-    counts = meaningful.value_counts().head(10).reset_index()
+    # Rename verbose FDA categories to short display labels, and merge ingredients
+    _RENAME = {
+        "Demand increase for the drug":                                              "Demand increase",
+        "Discontinuation of the manufacture of the drug":                            "Discontinued manufacture",
+        "Requirements related to complying with good manufacturing practices":        "Compliance requirements",
+        "Delay in shipping of the drug":                                             "Shipping delays",
+        "Regulatory delay":                                                          "Regulatory delay",
+        "Shortage of an active ingredient":                                          "Ingredient shortage",
+        "Shortage of an inactive ingredient component":                              "Ingredient shortage",
+    }
+    renamed = meaningful.map(lambda r: _RENAME.get(r, r))
+    counts = renamed.value_counts().reset_index()
     counts.columns = ["reason", "count"]
-    counts = counts.sort_values("count", ascending=True)
+    counts = counts.sort_values("count", ascending=False).reset_index(drop=True)
+    # Reverse for horizontal bar (ascending so longest bar is on top)
+    counts = counts.sort_values("count", ascending=True).reset_index(drop=True)
 
-    short_reasons = counts["reason"].apply(lambda t: shorten_label(t, max_chars=28))
     norm    = (counts["count"] - counts["count"].min()) / max(counts["count"].max() - counts["count"].min(), 1)
     colors  = [f"rgba(220,38,38,{0.45 + 0.55 * float(v):.2f})" for v in norm]
 
-    max_lines = short_reasons.apply(lambda t: t.count("<br>") + 1).max()
-    row_h     = max(52, max_lines * 26)
-    height    = max(340, len(counts) * row_h + 100)
-
-    max_line_len = short_reasons.apply(
-        lambda t: max(len(s) for s in t.split("<br>"))
-    ).max()
-    left_margin = min(210, max(130, max_line_len * 7))
+    row_h  = 52
+    height = max(340, len(counts) * row_h + 100)
+    left_margin = 190
 
     fig = go.Figure(go.Bar(
-        x=counts["count"], y=short_reasons,
+        x=counts["count"], y=counts["reason"],
         orientation="h",
         marker=dict(color=colors, line=dict(color=T.chart_bg, width=0.6)),
-        hovertemplate="<b>%{customdata}</b><br>%{x:,} shortages<extra></extra>",
-        customdata=counts["reason"],
+        hovertemplate="<b>%{y}</b><br>%{x:,} shortages<extra></extra>",
     ))
     layout = _base("Top FDA-Classified Shortage Reasons", height=height,
                    margin=dict(t=64, b=90, l=left_margin, r=90))
