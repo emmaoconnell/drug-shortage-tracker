@@ -364,10 +364,10 @@ with st.sidebar:
     _PAGES = [
         "Overview",
         "Manufacturers",
+        "Trends",
         "Forecast",
         "Search",
         "Export Data",
-        "Trends",
         "Alerts",
         "Watchlist",
     ]
