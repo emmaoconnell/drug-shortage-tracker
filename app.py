@@ -899,7 +899,7 @@ elif page == "Forecast":
 
     # ── Main forecast chart ───────────────────────────────────────────────────
     section("Forecast Chart")
-    fig = fc_module.forecast_figure(daily_df, column=metric_choice, horizon_days=horizon)
+    fig = fc_module.forecast_figure(daily_df, column=metric_choice, horizon_days=horizon, wrap_title=_is_mobile)
     plot(fig)
 
     # ── Model statistics ──────────────────────────────────────────────────────

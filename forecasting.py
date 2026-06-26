@@ -250,6 +250,7 @@ def forecast_figure(
     column: str = "current",
     horizon_days: int = 30,
     title: str = "",
+    wrap_title: bool = False,
 ) -> go.Figure:
     """
     Always returns a populated figure — never an empty chart.
@@ -380,7 +381,7 @@ def forecast_figure(
     chart_title = title or f"{column.replace('_',' ').title()} Shortages — {horizon_days}-Day Forecast"
 
     fig.update_layout(
-        title=_theme.chart_title_dict(chart_title, y=0.98, yanchor="top"),
+        title=_theme.chart_title_dict(chart_title, y=0.98, yanchor="top", wrap=wrap_title),
         xaxis=dict(
             title="Date",
             title_font=dict(family=_font, size=13, color=P["axis"]),
