@@ -348,7 +348,7 @@ with st.sidebar:
         "Manufacturers",
         "Forecast",
         "Search",
-        "Data Table",
+        "Export Data",
         "Trends",
         "Alerts",
         "Watchlist",
@@ -1140,8 +1140,8 @@ elif page == "Search":
 # ════════════════════════════════════════════════════════════════════════════
 # PAGE — Data Table
 # ════════════════════════════════════════════════════════════════════════════
-elif page == "Data Table":
-    page_header("Data Table", "Filter, sort, and export shortage records")
+elif page == "Export Data":
+    page_header("Export Data", "Filter, search, sort, and export FDA drug shortage records.")
 
     if df.empty:
         st.info("No data loaded.")
