@@ -329,13 +329,16 @@ def page_header(title: str, subtitle: str, badge: str = "") -> None:
 # Sidebar
 # ════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
+    _ST = theme.get()
+    _logo_color    = "#FFFFFF" if _ST.name == "dark" else "#FFFFFF"
+    _sub_color     = "#FFFFFF" if _ST.name == "dark" else "#93C5FD"
     st.markdown(
-        """
+        f"""
         <div style="padding:12px 0 28px">
-          <div style="font-size:2.4rem;font-weight:800;color:white;letter-spacing:0.02em;line-height:1.1">
+          <div style="font-size:2.4rem;font-weight:800;color:{_logo_color};letter-spacing:0.02em;line-height:1.1">
             RxSignal
           </div>
-          <div style="font-size:0.72rem;color:#93C5FD;font-weight:500;margin-top:8px;letter-spacing:0.08em">
+          <div style="font-size:0.72rem;color:{_sub_color};font-weight:500;margin-top:8px;letter-spacing:0.08em">
             DRUG SHORTAGE INTELLIGENCE
           </div>
         </div>
