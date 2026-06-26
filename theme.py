@@ -208,7 +208,7 @@ header[data-testid="stHeader"] button,
 }}
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] span {{
-    color: {T.text_sidebar} !important;
+    color: {"#9AA5BB" if dark else T.text_sidebar} !important;
 }}
 [data-testid="stSidebar"] h1,
 [data-testid="stSidebar"] h2,
@@ -251,8 +251,7 @@ header[data-testid="stHeader"] button,
 }}
 
 /* Each option label becomes a pill button — inactive */
-[data-testid="stSidebar"] .stRadio > div label,
-[data-testid="stSidebar"] [data-baseweb="radio"] label {{
+[data-testid="stSidebar"] .stRadio > div label {{
     display: flex !important;
     align-items: center !important;
     width: 100% !important;
@@ -261,7 +260,6 @@ header[data-testid="stHeader"] button,
     cursor: pointer !important;
     transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease !important;
     background: transparent !important;
-    color: {"#AEB8CC" if dark else "#D5DBE8"} !important;
     font-size: 0.97rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.01em !important;
@@ -272,47 +270,41 @@ header[data-testid="stHeader"] button,
     user-select: none !important;
 }}
 
-/* Inactive inner text — explicit color beats sidebar p/span catch-all */
-[data-testid="stSidebar"] .stRadio > div label [data-testid="stMarkdownContainer"] p,
-[data-testid="stSidebar"] .stRadio > div label [data-testid="stMarkdownContainer"] span,
-[data-testid="stSidebar"] [data-baseweb="radio"] label p,
-[data-testid="stSidebar"] [data-baseweb="radio"] label span {{
+/* ── Nav text color — target the markdown container and every element inside it.
+   Uses 3 data-testid attributes for specificity (0,3,1) to beat emotion classes. ── */
+
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] span,
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] div,
+[data-testid="stSidebar"] [data-testid="stRadio"] [data-testid="stMarkdownContainer"] * {{
     color: {"#AEB8CC" if dark else "#D5DBE8"} !important;
-    font-size: 0.97rem !important;
-    font-weight: inherit !important;
-    margin: 0 !important;
-    padding: 0 !important;
     pointer-events: none !important;
 }}
 
-/* Hover glow */
-[data-testid="stSidebar"] .stRadio > div label:hover,
-[data-testid="stSidebar"] [data-baseweb="radio"] label:hover {{
+/* Hover */
+[data-testid="stSidebar"] .stRadio > div label:hover {{
     background: rgba(255,255,255,0.10) !important;
-    color: #FFFFFF !important;
     box-shadow: 0 0 0 1px rgba(99,179,237,0.25), 0 2px 8px rgba(0,0,0,0.25) !important;
 }}
-[data-testid="stSidebar"] .stRadio > div label:hover [data-testid="stMarkdownContainer"] p,
-[data-testid="stSidebar"] .stRadio > div label:hover [data-testid="stMarkdownContainer"] span,
-[data-testid="stSidebar"] [data-baseweb="radio"] label:hover p,
-[data-testid="stSidebar"] [data-baseweb="radio"] label:hover span {{
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover [data-testid="stMarkdownContainer"] span,
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover [data-testid="stMarkdownContainer"] div,
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover [data-testid="stMarkdownContainer"] * {{
     color: #FFFFFF !important;
 }}
 
 /* Active / selected pill */
-[data-testid="stSidebar"] .stRadio > div label:has(input:checked),
-[data-testid="stSidebar"] [data-baseweb="radio"] label:has(input:checked) {{
+[data-testid="stSidebar"] .stRadio > div label:has(input:checked) {{
     background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 60%, #3B82F6 100%) !important;
-    color: #FFFFFF !important;
     font-weight: 600 !important;
     box-shadow: 0 0 0 1px rgba(59,130,246,0.50),
                 0 0 12px rgba(59,130,246,0.30),
                 0 2px 8px rgba(0,0,0,0.30) !important;
 }}
-[data-testid="stSidebar"] .stRadio > div label:has(input:checked) [data-testid="stMarkdownContainer"] p,
-[data-testid="stSidebar"] .stRadio > div label:has(input:checked) [data-testid="stMarkdownContainer"] span,
-[data-testid="stSidebar"] [data-baseweb="radio"] label:has(input:checked) p,
-[data-testid="stSidebar"] [data-baseweb="radio"] label:has(input:checked) span {{
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) [data-testid="stMarkdownContainer"] span,
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) [data-testid="stMarkdownContainer"] div,
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) [data-testid="stMarkdownContainer"] * {{
     color: #FFFFFF !important;
 }}
 
