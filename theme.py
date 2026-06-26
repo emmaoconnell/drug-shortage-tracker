@@ -1219,8 +1219,14 @@ def plotly_base(
         plot_bgcolor=T.chart_plot_bg,
         font=dict(family=_FONT_FAMILY, size=12, color=T.text_primary),
         title=dict(
-            text=title,
-            font=dict(family=_FONT_FAMILY, size=18, color=T.text_primary),
+            text=(
+                f"<span style='font-family:{_FONT_FAMILY};font-size:13px;"
+                f"font-weight:700;letter-spacing:0.14em;"
+                f"color:{'#C7CDD9' if dark else '#6B7280'}'>"
+                f"{title.upper()}</span>"
+                if title else title
+            ),
+            font=dict(family=_FONT_FAMILY, size=13, color="#C7CDD9" if dark else "#6B7280"),
             x=0,
             pad=dict(l=4, b=10),
         ),
