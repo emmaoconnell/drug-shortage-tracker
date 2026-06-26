@@ -257,13 +257,16 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
 
     _dark = T.name == "dark"
     _DONUT_COLORS = {
-        "Current":            "#B74D4D" if _dark else STATUS_COLORS["Current"],
-        "To Be Discontinued": "#B78A36" if _dark else STATUS_COLORS["To Be Discontinued"],
-        "Resolved":           "#5C9567" if _dark else STATUS_COLORS["Resolved"],
-        "Discontinued":       "#B78A36" if _dark else STATUS_COLORS["Discontinued"],
-        "No Longer Marketed": "#B78A36" if _dark else STATUS_COLORS["No Longer Marketed"],
+        # Dark: slightly richer than before (~10-15% more saturation)
+        "Current":            "#C45252" if _dark else STATUS_COLORS["Current"],
+        "To Be Discontinued": "#C49530" if _dark else STATUS_COLORS["To Be Discontinued"],
+        "Resolved":           "#4FA35E" if _dark else STATUS_COLORS["Resolved"],
+        "Discontinued":       "#C49530" if _dark else STATUS_COLORS["Discontinued"],
+        "No Longer Marketed": "#C49530" if _dark else STATUS_COLORS["No Longer Marketed"],
     }
     colors = [_DONUT_COLORS.get(s, T.text_muted) for s in counts["status"]]
+    # Segment border: soft mid-tone that separates slices without harsh contrast
+    _seg_border = "#3A3D52" if _dark else "#D1D5DB"
 
     # Wrap "To Be Discontinued" in the legend; keep original label in hover via customdata
     display_labels = [
@@ -276,7 +279,11 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
         hole=0.62,
         direction="clockwise",
         sort=False,
-        marker=dict(colors=colors, line=dict(color=T.chart_bg, width=0.5)),
+        marker=dict(
+            colors=colors,
+            line=dict(color=_seg_border, width=1.5),
+        ),
+        opacity=0.93,
         textinfo="none",
         customdata=counts["status"],
         hovertemplate="<b>%{customdata}</b><br>%{value:,} records<br>%{percent}<extra></extra>",
