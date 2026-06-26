@@ -473,6 +473,7 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
             tickangle=-30,
             tickfont=dict(family=_FONT, size=11, color=T.text_primary),
             automargin=True,
+            domain=[0, 0.86],   # shift plot left; ~14% right padding for legend
         )
         layout["yaxis"].update(
             title="Shortage Count",
@@ -483,7 +484,7 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
             font=dict(family=_FONT, size=11, color=T.text_primary),
             orientation="h",
             yanchor="bottom", y=1.06,
-            xanchor="center", x=0.5,
+            xanchor="center", x=0.43,   # centred over the 86% domain
             bgcolor=_leg_bg, bordercolor=_leg_border, borderwidth=1,
         )
 
@@ -553,7 +554,8 @@ def manufacturer_heatmap(df: pd.DataFrame, top_n: int = 12) -> go.Figure:
     layout = _base("Shortage Volume Heatmap", height=height,
                    margin=dict(t=64, b=110, l=left_margin, r=80))
     layout["xaxis"].update(title="", side="bottom", tickangle=0,
-                           tickfont=dict(family=_FONT, size=11, color=T.text_primary))
+                           tickfont=dict(family=_FONT, size=11, color=T.text_primary),
+                           domain=[0, 0.84])   # shift heatmap left; colorbar gets ~16% right
     layout["yaxis"].update(tickfont=dict(family=_FONT, size=11, color=T.text_primary))
     fig.update_layout(**layout)
     return fig
