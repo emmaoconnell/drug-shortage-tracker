@@ -412,7 +412,7 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     return fig
 
 
-def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 10,
+def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 14,
                                       mobile: bool = False) -> go.Figure:
     """Grouped bar chart — Shortage Status by Top Manufacturers.
 
@@ -424,7 +424,7 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 10,
         return _no_data_fig("No manufacturer data")
     T = _T()
 
-    top_names = _non_blank_mfr(df).value_counts().head(top_n).index.tolist()
+    top_names = _non_blank_mfr(df).value_counts().head(10 if mobile else top_n).index.tolist()
     if not top_names:
         return _no_data_fig("Fetch latest data to populate manufacturer charts")
 

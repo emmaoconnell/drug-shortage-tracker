@@ -664,7 +664,7 @@ elif page == "Manufacturers":
     plot(charts.risk_scatter(risk_df), height=560)
 
     section("Shortage Composition by Manufacturer")
-    plot(charts.manufacturer_current_vs_resolved(df, top_n=10, mobile=False))
+    plot(charts.manufacturer_current_vs_resolved(df, top_n=14, mobile=False))
 
     section("Market Share Treemap")
     plot(charts.market_share_treemap(df))
