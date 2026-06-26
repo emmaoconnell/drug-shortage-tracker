@@ -1136,12 +1136,15 @@ def timeline_line(trend_df: pd.DataFrame) -> go.Figure:
         return _no_data_fig("No snapshot history yet")
     T = _T()
 
+    _dark = T.name == "dark"
+    _line_color  = "#5DA9FF" if _dark else "#1A56DB"
+    _fill_color  = "rgba(93,169,255,0.17)" if _dark else "rgba(26,86,219,0.08)"
     fig = go.Figure(go.Scatter(
         x=trend_df["day"], y=trend_df["record_count"],
         mode="lines+markers",
-        line=dict(color="#1A56DB", width=3),
-        marker=dict(size=9, color="#1A56DB", line=dict(color=T.chart_bg, width=2)),
-        fill="tozeroy", fillcolor="rgba(26,86,219,0.08)",
+        line=dict(color=_line_color, width=3),
+        marker=dict(size=9, color=_line_color, line=dict(color=T.chart_bg, width=2)),
+        fill="tozeroy", fillcolor=_fill_color,
         hovertemplate="<b>%{x}</b><br>Records: %{y:,}<extra></extra>",
         name="Records Captured",
     ))
