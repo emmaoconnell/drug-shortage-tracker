@@ -244,7 +244,15 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
     counts = df["status"].value_counts().reset_index()
     counts.columns = ["status", "count"]
     total  = int(counts["count"].sum())
-    colors = [STATUS_COLORS.get(s, T.text_muted) for s in counts["status"]]
+    _dark = T.name == "dark"
+    _DONUT_COLORS = {
+        "Current":            "#B74D4D" if _dark else STATUS_COLORS["Current"],
+        "To Be Discontinued": "#B78A36" if _dark else STATUS_COLORS["To Be Discontinued"],
+        "Resolved":           "#5C9567" if _dark else STATUS_COLORS["Resolved"],
+        "Discontinued":       "#B78A36" if _dark else STATUS_COLORS["Discontinued"],
+        "No Longer Marketed": "#B78A36" if _dark else STATUS_COLORS["No Longer Marketed"],
+    }
+    colors = [_DONUT_COLORS.get(s, T.text_muted) for s in counts["status"]]
 
     # Wrap "To Be Discontinued" in the legend; keep original label in hover via customdata
     display_labels = [
@@ -263,7 +271,7 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
         domain=dict(x=[0.05, 0.58], y=[0.12, 0.88]),
     ))
     fig.add_annotation(
-        text=f"<b>{total:,}</b><br><span style='font-size:14px'>TOTAL</span>",
+        text=f"<b>{total:,}</b><br><span style='font-size:14px'>TOTAL</span><br><span style='font-size:14px'>SHORTAGES</span>",
         x=0.315, y=0.5, showarrow=False,
         xanchor="center", yanchor="middle",
         font=dict(family=_FONT, size=22, color=T.text_primary),
@@ -342,8 +350,10 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     top.columns = ["manufacturer", "count"]
     top = top.sort_values("count")
 
+    _dark  = T.name == "dark"
+    _base_rgb = "79,120,215" if _dark else "26,86,219"
     norm   = (top["count"] - top["count"].min()) / max(top["count"].max() - top["count"].min(), 1)
-    colors = [f"rgba(26,86,219,{0.38 + 0.62 * float(v):.2f})" for v in norm]
+    colors = [f"rgba({_base_rgb},{0.45 + 0.55 * float(v):.2f})" for v in norm]
 
     short_labels = top["manufacturer"].apply(shorten_manufacturer_name)
     _max_line = short_labels.apply(
@@ -359,7 +369,7 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
         hovertemplate="<b>%{customdata}</b><br>Shortages: %{x:,}<extra></extra>",
         customdata=top["manufacturer"],
     ))
-    layout = _base(f"Top {top_n} Manufacturers by Shortage Count", height=height,
+    layout = _base("Affected Manufacturers", height=height,
                    margin=dict(t=64, b=90, l=left_margin, r=70))
     layout["xaxis"].update(title="Shortage Count")
     layout["yaxis"].update(tickfont=dict(family=_FONT, size=11, color=T.text_primary))
