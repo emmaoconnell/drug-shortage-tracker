@@ -172,8 +172,7 @@ section[data-testid="stMain"] .block-container {{
     padding-left: 2rem !important;
     padding-right: 2rem !important;
     max-width: 1400px;
-    overflow-x: hidden !important;
-    overflow-y: visible !important;
+    overflow: visible !important;
 }}
 
 /* ── Top chrome — always dark navy regardless of theme ── */
@@ -1112,6 +1111,8 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
 
 /* ════════════════════════════════════
    MOBILE — prevent horizontal scroll/wobble
+   overflow-x: hidden is ONLY applied to the document/viewport level.
+   Never apply it to cards — that triggers implicit overflow-y: auto (browser spec).
 ════════════════════════════════════ */
 @media (max-width: 768px) {{
     html,
@@ -1124,7 +1125,7 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
         max-width: 100vw !important;
     }}
 
-    /* Cards and chart wrappers must not exceed viewport */
+    /* Cards: constrain width only — NO overflow property (avoids implicit overflow-y:auto) */
     [data-testid="stPlotlyChart"],
     [data-testid="metric-container"],
     [data-testid="stVerticalBlock"],
@@ -1138,14 +1139,13 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
         max-width: 100% !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
-        overflow-x: hidden !important;
+        height: auto !important;
     }}
 
-    /* Dataframes/tables: scroll inside the element, not the page */
+    /* Tables only: internal horizontal scroll is acceptable */
     [data-testid="stDataFrame"],
     [data-testid="stTable"],
-    .stDataFrame,
-    iframe {{
+    .stDataFrame {{
         max-width: 100% !important;
         overflow-x: auto !important;
     }}
