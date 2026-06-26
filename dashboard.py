@@ -298,6 +298,7 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
         orientation="v", x=0.60, y=0.5, yanchor="middle", xanchor="left",
         font=dict(family=_FONT, size=11, color=T.text_primary),
         bgcolor="rgba(0,0,0,0)", borderwidth=0,
+        itemclick=False, itemdoubleclick=False,
     )
     fig.update_layout(**{k: v for k, v in layout.items() if k not in ("xaxis", "yaxis")})
     return fig
