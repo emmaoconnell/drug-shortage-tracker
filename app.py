@@ -47,8 +47,18 @@ st.set_page_config(
 # ════════════════════════════════════════════════════════════════════════════
 # Session-state: theme must be set BEFORE css_block() is called
 # ════════════════════════════════════════════════════════════════════════════
+import re as _re
+
 if "dark_mode" not in st.session_state:
     st.session_state["dark_mode"] = False
+
+# Detect mobile via User-Agent header (st.context available in Streamlit ≥1.29).
+# Falls back to False (desktop) if the header is absent or context unavailable.
+try:
+    _ua = st.context.headers.get("User-Agent", "")
+    _is_mobile: bool = bool(_re.search(r"Mobile|Android|iPhone|iPod", _ua, _re.I))
+except Exception:
+    _is_mobile = False
 
 # Inject theme CSS (re-runs whenever dark_mode toggles)
 st.markdown(theme.css_block(), unsafe_allow_html=True)
@@ -664,7 +674,7 @@ elif page == "Manufacturers":
     plot(charts.risk_scatter(risk_df), height=560)
 
     section("Shortage Composition by Manufacturer")
-    plot(charts.manufacturer_current_vs_resolved(df, top_n=14, mobile=False))
+    plot(charts.manufacturer_current_vs_resolved(df, top_n=14, mobile=_is_mobile))
 
     section("Market Share Treemap")
     plot(charts.market_share_treemap(df))
