@@ -357,7 +357,7 @@ with st.sidebar:
     page = st.radio(
         "Navigation",
         _PAGES,
-        label_visibility="collapsed",
+        label_visibility="visible",
     )
 
     st.markdown("---")
