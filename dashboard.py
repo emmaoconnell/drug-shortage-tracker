@@ -798,11 +798,11 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
     # (ax, ay): pixel offset from bubble center; None = label centered on bubble.
     # Plotly ay: positive = down in screen coords.
     _KEY_LABELS: dict[str, tuple | None] = {
-        "hospira":       None,                        # large bubble — center
-        "fresenius kabi": None,                       # large bubble — center
-        "hikma":         None,                        # large bubble — center
-        "pfizer":        ( 34,  34, "left",  "top"),  # lower-right (avoids Teva)
-        "teva":          (-34, -34, "right", "bottom"), # upper-left (avoids Pfizer)
+        "hospira":        None,
+        "fresenius kabi": None,
+        "hikma":          None,
+        "pfizer":         None,
+        "teva":           None,
     }
 
     def _key_match(mfr: str) -> str | None:
@@ -983,8 +983,8 @@ def risk_scatter(risk_df: pd.DataFrame) -> go.Figure:
         "hospira":   None,                          # large — center
         "fresenius": None,                          # large — center
         "hikma":     None,                          # large — center
-        "pfizer":    ( 34,  34, "left",  "top"),    # lower-right (avoids Teva)
-        "teva":      (-34, -34, "right", "bottom"), # upper-left  (avoids Pfizer)
+        "pfizer":    None,
+        "teva":      None,
     }
 
     def _rs_key_match(mfr: str) -> str | None:
