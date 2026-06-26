@@ -648,12 +648,7 @@ elif page == "Manufacturers":
     risk_df = fc_module.manufacturer_risk_table(df)
 
     section("Risk Matrix — Top Companies")
-
-    c1, c2 = st.columns([3, 2])
-    with c1:
-        plot(charts.risk_scatter(risk_df), height=560)
-    with c2:
-        plot(charts.manufacturer_heatmap(df, top_n=12), height=560)
+    plot(charts.risk_scatter(risk_df), height=560)
 
     section("Shortage Composition by Manufacturer")
     plot(charts.manufacturer_current_vs_resolved(df, top_n=14, mobile=False))
