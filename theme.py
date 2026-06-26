@@ -250,8 +250,9 @@ header[data-testid="stHeader"] button,
     display: none !important;
 }}
 
-/* Each option label becomes a pill button */
-[data-testid="stSidebar"] .stRadio > div label {{
+/* Each option label becomes a pill button — inactive */
+[data-testid="stSidebar"] .stRadio > div label,
+[data-testid="stSidebar"] [data-baseweb="radio"] label {{
     display: flex !important;
     align-items: center !important;
     width: 100% !important;
@@ -260,7 +261,7 @@ header[data-testid="stHeader"] button,
     cursor: pointer !important;
     transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease !important;
     background: transparent !important;
-    color: {"#C8D0DF" if dark else "#D5DBE8"} !important;
+    color: {"#AEB8CC" if dark else "#D5DBE8"} !important;
     font-size: 0.97rem !important;
     font-weight: 500 !important;
     letter-spacing: 0.01em !important;
@@ -271,15 +272,36 @@ header[data-testid="stHeader"] button,
     user-select: none !important;
 }}
 
+/* Inactive inner text — explicit color beats sidebar p/span catch-all */
+[data-testid="stSidebar"] .stRadio > div label [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] .stRadio > div label [data-testid="stMarkdownContainer"] span,
+[data-testid="stSidebar"] [data-baseweb="radio"] label p,
+[data-testid="stSidebar"] [data-baseweb="radio"] label span {{
+    color: {"#AEB8CC" if dark else "#D5DBE8"} !important;
+    font-size: 0.97rem !important;
+    font-weight: inherit !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+}}
+
 /* Hover glow */
-[data-testid="stSidebar"] .stRadio > div label:hover {{
+[data-testid="stSidebar"] .stRadio > div label:hover,
+[data-testid="stSidebar"] [data-baseweb="radio"] label:hover {{
     background: rgba(255,255,255,0.10) !important;
     color: #FFFFFF !important;
     box-shadow: 0 0 0 1px rgba(99,179,237,0.25), 0 2px 8px rgba(0,0,0,0.25) !important;
 }}
+[data-testid="stSidebar"] .stRadio > div label:hover [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] .stRadio > div label:hover [data-testid="stMarkdownContainer"] span,
+[data-testid="stSidebar"] [data-baseweb="radio"] label:hover p,
+[data-testid="stSidebar"] [data-baseweb="radio"] label:hover span {{
+    color: #FFFFFF !important;
+}}
 
 /* Active / selected pill */
-[data-testid="stSidebar"] .stRadio > div label:has(input:checked) {{
+[data-testid="stSidebar"] .stRadio > div label:has(input:checked),
+[data-testid="stSidebar"] [data-baseweb="radio"] label:has(input:checked) {{
     background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 60%, #3B82F6 100%) !important;
     color: #FFFFFF !important;
     font-weight: 600 !important;
@@ -287,16 +309,11 @@ header[data-testid="stHeader"] button,
                 0 0 12px rgba(59,130,246,0.30),
                 0 2px 8px rgba(0,0,0,0.30) !important;
 }}
-
-/* Inner text — must beat the broad sidebar p rule */
-[data-testid="stSidebar"] .stRadio > div label [data-testid="stMarkdownContainer"] p,
-[data-testid="stSidebar"] .stRadio > div label span {{
-    font-size: 0.97rem !important;
-    font-weight: inherit !important;
-    color: inherit !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    pointer-events: none !important;
+[data-testid="stSidebar"] .stRadio > div label:has(input:checked) [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] .stRadio > div label:has(input:checked) [data-testid="stMarkdownContainer"] span,
+[data-testid="stSidebar"] [data-baseweb="radio"] label:has(input:checked) p,
+[data-testid="stSidebar"] [data-baseweb="radio"] label:has(input:checked) span {{
+    color: #FFFFFF !important;
 }}
 
 /* ── Sidebar utility buttons (theme toggle, Fetch, Load Cached) ── */
