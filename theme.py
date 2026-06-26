@@ -144,6 +144,22 @@ html, body, [class*="css"] {{
     font-family: 'Inter', system-ui, sans-serif;
 }}
 
+/* ── Prevent horizontal scroll at every level ── */
+*, *::before, *::after {{
+    box-sizing: border-box;
+}}
+html,
+body {{
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+}}
+.stApp,
+[data-testid="stAppViewContainer"],
+section[data-testid="stMain"] {{
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+}}
+
 /* ── App background ── */
 .stApp {{
     background: {T.bg_app} !important;
@@ -156,7 +172,8 @@ section[data-testid="stMain"] .block-container {{
     padding-left: 2rem !important;
     padding-right: 2rem !important;
     max-width: 1400px;
-    overflow: visible !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
 }}
 
 /* ── Top chrome — always dark navy regardless of theme ── */
@@ -1090,6 +1107,47 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
     section[data-testid="stMain"] .block-container {{
         padding-left: 1rem !important;
         padding-right: 1rem !important;
+    }}
+}}
+
+/* ════════════════════════════════════
+   MOBILE — prevent horizontal scroll/wobble
+════════════════════════════════════ */
+@media (max-width: 768px) {{
+    html,
+    body,
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    section[data-testid="stMain"],
+    section[data-testid="stMain"] .block-container {{
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }}
+
+    /* Cards and chart wrappers must not exceed viewport */
+    [data-testid="stPlotlyChart"],
+    [data-testid="metric-container"],
+    [data-testid="stVerticalBlock"],
+    [data-testid="stVerticalBlockBorderWrapper"],
+    .dashboard-card,
+    .chart-card,
+    .rx-card,
+    .metric-card,
+    .insight-card {{
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        overflow-x: hidden !important;
+    }}
+
+    /* Dataframes/tables: scroll inside the element, not the page */
+    [data-testid="stDataFrame"],
+    [data-testid="stTable"],
+    .stDataFrame,
+    iframe {{
+        max-width: 100% !important;
+        overflow-x: auto !important;
     }}
 }}
 
