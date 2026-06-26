@@ -241,9 +241,20 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
         return _no_data_fig("No status data")
     T = _T()
 
-    counts = df["status"].value_counts().reset_index()
-    counts.columns = ["status", "count"]
-    total  = int(counts["count"].sum())
+    raw_counts = df["status"].value_counts().reset_index()
+    raw_counts.columns = ["status", "count"]
+    total = int(raw_counts["count"].sum())
+
+    # Enforce clockwise segment order: Current → To Be Discontinued → Resolved → others
+    _ORDER = ["Current", "To Be Discontinued", "Resolved", "Discontinued", "No Longer Marketed"]
+    counts = (
+        raw_counts
+        .set_index("status")
+        .reindex([s for s in _ORDER if s in raw_counts["status"].values])
+        .dropna()
+        .reset_index()
+    )
+
     _dark = T.name == "dark"
     _DONUT_COLORS = {
         "Current":            "#B74D4D" if _dark else STATUS_COLORS["Current"],
@@ -263,15 +274,20 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
         labels=display_labels,
         values=counts["count"],
         hole=0.62,
-        marker=dict(colors=colors, line=dict(color=T.chart_bg, width=2.5)),
+        direction="clockwise",
+        sort=False,
+        marker=dict(colors=colors, line=dict(color=T.chart_bg, width=0.5)),
         textinfo="none",
         customdata=counts["status"],
         hovertemplate="<b>%{customdata}</b><br>%{value:,} records<br>%{percent}<extra></extra>",
-        pull=[0.04 if s == "Current" else 0 for s in counts["status"]],
         domain=dict(x=[0.05, 0.58], y=[0.12, 0.88]),
     ))
     fig.add_annotation(
-        text=f"<b>{total:,}</b><br><span style='font-size:14px'>TOTAL</span><br><span style='font-size:14px'>SHORTAGES</span>",
+        text=(
+            f"<b>{total:,}</b>"
+            f"<br><span style='font-size:13px;line-height:1'>TOTAL</span>"
+            f"<br><span style='font-size:13px;line-height:1'>SHORTAGES</span>"
+        ),
         x=0.315, y=0.5, showarrow=False,
         xanchor="center", yanchor="middle",
         font=dict(family=_FONT, size=22, color=T.text_primary),
