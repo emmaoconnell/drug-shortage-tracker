@@ -1092,6 +1092,54 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
         padding-right: 1rem !important;
     }}
 }}
+
+/* ════════════════════════════════════
+   ENTRANCE ANIMATIONS
+════════════════════════════════════ */
+
+@keyframes rxFadeSlideUp {{
+    from {{
+        opacity: 0;
+        transform: translateY(16px);
+    }}
+    to {{
+        opacity: 1;
+        transform: translateY(0);
+    }}
+}}
+
+/* Apply to chart cards, KPI cards, and custom card wrappers */
+[data-testid="stPlotlyChart"],
+[data-testid="metric-container"],
+.dashboard-card,
+.chart-card {{
+    animation: rxFadeSlideUp 0.55s ease-out both;
+}}
+
+/* Stagger columns slightly so side-by-side cards don't pop in simultaneously */
+[data-testid="stColumn"]:nth-child(2) [data-testid="stPlotlyChart"],
+[data-testid="stColumn"]:nth-child(2) [data-testid="metric-container"] {{
+    animation-delay: 0.07s;
+}}
+[data-testid="stColumn"]:nth-child(3) [data-testid="stPlotlyChart"],
+[data-testid="stColumn"]:nth-child(3) [data-testid="metric-container"] {{
+    animation-delay: 0.14s;
+}}
+[data-testid="stColumn"]:nth-child(4) [data-testid="stPlotlyChart"],
+[data-testid="stColumn"]:nth-child(4) [data-testid="metric-container"] {{
+    animation-delay: 0.21s;
+}}
+
+/* Respect OS-level reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {{
+    [data-testid="stPlotlyChart"],
+    [data-testid="metric-container"],
+    .dashboard-card,
+    .chart-card {{
+        animation: none !important;
+    }}
+}}
+
 </style>
 """
 
