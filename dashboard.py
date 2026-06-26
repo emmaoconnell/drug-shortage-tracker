@@ -298,15 +298,15 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
         xanchor="center", yanchor="middle",
         font=dict(family=_FONT, size=22, color=T.text_primary),
     )
-    fig.add_annotation(  # "TOTAL"
+    fig.add_annotation(  # "TOTAL" — moved up ~5px from previous
         text="TOTAL",
-        x=cx, y=0.448, showarrow=False,
+        x=cx, y=0.462, showarrow=False,
         xanchor="center", yanchor="middle",
         font=dict(family=_FONT, size=13, color=T.text_primary),
     )
-    fig.add_annotation(  # "SHORTAGES" — 0.038 units ≈ 14px below "TOTAL" center → ~1px visual gap
+    fig.add_annotation(  # "SHORTAGES" — 0.066 units ≈ 24px below "TOTAL" center → ~11px visual gap
         text="SHORTAGES",
-        x=cx, y=0.410, showarrow=False,
+        x=cx, y=0.396, showarrow=False,
         xanchor="center", yanchor="middle",
         font=dict(family=_FONT, size=13, color=T.text_primary),
     )
