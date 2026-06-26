@@ -289,15 +289,26 @@ def status_donut(df: pd.DataFrame) -> go.Figure:
         hovertemplate="<b>%{customdata}</b><br>%{value:,} records<br>%{percent}<extra></extra>",
         domain=dict(x=[0.05, 0.58], y=[0.12, 0.88]),
     ))
-    fig.add_annotation(
-        text=(
-            f"<b>{total:,}</b>"
-            f"<br><span style='font-size:13px;line-height:1'>TOTAL</span>"
-            f"<br><span style='font-size:13px;line-height:1'>SHORTAGES</span>"
-        ),
-        x=0.315, y=0.5, showarrow=False,
+    # Three separate annotations give precise vertical control that <br> cannot.
+    # y=0.5 is the donut center (paper coords). Figure height=360px → 1 unit = 360px.
+    cx = 0.315
+    fig.add_annotation(  # large number
+        text=f"<b>{total:,}</b>",
+        x=cx, y=0.555, showarrow=False,
         xanchor="center", yanchor="middle",
         font=dict(family=_FONT, size=22, color=T.text_primary),
+    )
+    fig.add_annotation(  # "TOTAL"
+        text="TOTAL",
+        x=cx, y=0.448, showarrow=False,
+        xanchor="center", yanchor="middle",
+        font=dict(family=_FONT, size=13, color=T.text_primary),
+    )
+    fig.add_annotation(  # "SHORTAGES" — 0.038 units ≈ 14px below "TOTAL" center → ~1px visual gap
+        text="SHORTAGES",
+        x=cx, y=0.410, showarrow=False,
+        xanchor="center", yanchor="middle",
+        font=dict(family=_FONT, size=13, color=T.text_primary),
     )
     layout = _base("Shortage Status Distribution", height=360,
                    margin=dict(t=56, b=16, l=0, r=16), showlegend=True)
