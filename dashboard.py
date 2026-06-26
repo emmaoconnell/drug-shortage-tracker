@@ -400,29 +400,35 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
     _leg_bg     = "rgba(31,41,55,0.95)" if T.name == "dark" else "rgba(255,255,255,0.95)"
     _leg_border = "#374151" if T.name == "dark" else "#D1D5DB"
 
+    # Stack order: bottom → top  (Current / To Be Discontinued / Resolved)
+    _STACK_ORDER = ["Current", "To Be Discontinued", "Resolved",
+                    "Discontinued", "No Longer Marketed"]
+
     fig = go.Figure()
 
     if mobile:
-        # ── Horizontal layout (mobile) ─────────────────────────────────────
-        for status, color in STATUS_COLORS.items():
-            if status in pivot.columns:
-                vals  = pivot[status].tolist()
-                hover = [
-                    f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
-                    for i in range(len(full_names))
-                ]
-                fig.add_trace(go.Bar(
-                    name=status, y=short_names, x=vals, orientation="h",
-                    marker_color=color,
-                    hovertemplate="%{customdata}<extra></extra>",
-                    customdata=hover,
-                ))
+        # ── Horizontal stacked layout (mobile) ────────────────────────────
+        for status in _STACK_ORDER:
+            color = STATUS_COLORS.get(status)
+            if color is None or status not in pivot.columns:
+                continue
+            vals  = pivot[status].tolist()
+            hover = [
+                f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
+                for i in range(len(full_names))
+            ]
+            fig.add_trace(go.Bar(
+                name=status, y=short_names, x=vals, orientation="h",
+                marker_color=color,
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=hover,
+            ))
 
         _max_line   = max(max(len(s) for s in n.split("<br>")) for n in short_names)
         left_margin = min(140, max(90, _max_line * 7))
         height      = max(460, top_n * 44 + 100)
 
-        fig.update_layout(barmode="group")
+        fig.update_layout(barmode="stack", bargap=0.25)
         layout = _base("Shortage Status by Top Manufacturers", height=height,
                        margin=dict(t=100, b=50, l=left_margin, r=20), showlegend=True)
         layout["xaxis"].update(title="Shortage Count",
@@ -437,37 +443,34 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
         )
 
     else:
-        # ── Vertical layout (desktop) ──────────────────────────────────────
-        # Flatten 2-line short names to single-line for x-axis tick labels
+        # ── Vertical stacked layout (desktop) ─────────────────────────────
         x_labels = [n.replace("<br>", " ") for n in short_names]
 
-        for status, color in STATUS_COLORS.items():
-            if status in pivot.columns:
-                vals  = pivot[status].tolist()
-                hover = [
-                    f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
-                    for i in range(len(full_names))
-                ]
-                fig.add_trace(go.Bar(
-                    name=status, x=x_labels, y=vals,
-                    marker_color=color,
-                    hovertemplate="%{customdata}<extra></extra>",
-                    customdata=hover,
-                ))
+        for status in _STACK_ORDER:
+            color = STATUS_COLORS.get(status)
+            if color is None or status not in pivot.columns:
+                continue
+            vals  = pivot[status].tolist()
+            hover = [
+                f"<b>{full_names[i]}</b><br>{status}: {int(vals[i]):,}<extra></extra>"
+                for i in range(len(full_names))
+            ]
+            fig.add_trace(go.Bar(
+                name=status, x=x_labels, y=vals,
+                marker_color=color,
+                hovertemplate="%{customdata}<extra></extra>",
+                customdata=hover,
+            ))
 
-        # Height proportional to label rotation + number of manufacturers
         height = max(480, top_n * 28 + 160)
 
-        fig.update_layout(barmode="group")
-        # t=140 gives room for: title (~20px) + gap (~20px) + legend (~30px) + gap (~20px)
+        fig.update_layout(barmode="stack", bargap=0.30)
         layout = _base("Shortage Status by Top Manufacturers", height=height,
-                       margin=dict(t=140, b=110, l=60, r=20), showlegend=True)
-        layout["title"].update(
-            y=0.97, yanchor="top",   # pin title near the top of the figure
-        )
+                       margin=dict(t=140, b=100, l=60, r=20), showlegend=True)
+        layout["title"].update(y=0.97, yanchor="top")
         layout["xaxis"].update(
             title="",
-            tickangle=-35,
+            tickangle=-30,
             tickfont=dict(family=_FONT, size=11, color=T.text_primary),
             automargin=True,
         )
@@ -475,12 +478,11 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
             title="Shortage Count",
             tickfont=dict(family=_FONT, size=11, color=T.text_primary),
         )
-        # Legend centered in the gap between title and plot area
         layout["legend"].update(
             title_text="Status",
             font=dict(family=_FONT, size=11, color=T.text_primary),
             orientation="h",
-            yanchor="bottom", y=1.06,   # legend bottom sits just above the plot
+            yanchor="bottom", y=1.06,
             xanchor="center", x=0.5,
             bgcolor=_leg_bg, bordercolor=_leg_border, borderwidth=1,
         )
