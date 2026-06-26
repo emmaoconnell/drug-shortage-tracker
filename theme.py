@@ -1125,8 +1125,8 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
         max-width: 100vw !important;
     }}
 
-    /* Cards: constrain width only — NO overflow property (avoids implicit overflow-y:auto) */
-    [data-testid="stPlotlyChart"],
+    /* Cards: constrain width only — no height or overflow properties on Plotly containers
+       (height:auto on stPlotlyChart causes a ResizeObserver feedback loop) */
     [data-testid="metric-container"],
     [data-testid="stVerticalBlock"],
     [data-testid="stVerticalBlockBorderWrapper"],
@@ -1139,7 +1139,13 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
         max-width: 100% !important;
         margin-left: 0 !important;
         margin-right: 0 !important;
-        height: auto !important;
+    }}
+    /* Chart card wrapper: width only, never touch height */
+    [data-testid="stPlotlyChart"] {{
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }}
 
     /* Tables only: internal horizontal scroll is acceptable */
