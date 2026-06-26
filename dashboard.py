@@ -599,11 +599,7 @@ def market_share_treemap(df: pd.DataFrame) -> go.Figure:
         paper_bgcolor=T.chart_bg,
         plot_bgcolor=T.chart_plot_bg,
         font=dict(family=_FONT, size=12, color=T.text_primary),
-        title=dict(
-            text="Market Share — Top 15 Manufacturers by Shortage Count",
-            font=dict(family=_FONT, size=18, color=T.text_primary),
-            x=0, pad=dict(l=4, b=12),
-        ),
+        title=_theme.chart_title_dict("Market Share — Top 15 Manufacturers by Shortage Count"),
         xaxis=dict(
             title="Shortage Records",
             title_font=dict(size=13, color=T.text_muted),
@@ -886,12 +882,8 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         paper_bgcolor=T.chart_bg,
         plot_bgcolor=T.chart_plot_bg,
         font=dict(family=_FONT, size=12, color=_chart_text),
-        title=dict(
-            text="Top 10 Manufacturers by Shortage Impact",
-            font=dict(family=_FONT, size=18, color=_chart_text),
-            x=0.5, xanchor="center",
-            y=0.97, yanchor="top",
-        ),
+        title=_theme.chart_title_dict("Top 10 Manufacturers by Shortage Impact",
+                                       x=0.5, xanchor="center", y=0.97, yanchor="top"),
         xaxis=dict(
             title=dict(text="Market Share (%)", font=dict(size=12, color=_chart_text), standoff=24),
             tickfont=dict(size=10, color=_chart_text),

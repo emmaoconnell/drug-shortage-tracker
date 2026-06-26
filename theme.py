@@ -1200,6 +1200,28 @@ def scroll_reveal_js() -> str:
 _FONT_FAMILY = "Inter, system-ui, -apple-system, sans-serif"
 
 
+def chart_title_dict(text: str, x: float = 0, xanchor: str = "left",
+                     y: float | None = None, yanchor: str = "top") -> dict:
+    """
+    Return a Plotly title dict with KPI-style typography:
+    ALL CAPS, 700 weight, 0.14em letter-spacing, theme-aware color.
+    Use in fig.update_layout(title=theme.chart_title_dict("My Title")).
+    """
+    dark = is_dark()
+    color = "#C7CDD9" if dark else "#6B7280"
+    span = (
+        f"<span style='font-family:{_FONT_FAMILY};font-size:13px;"
+        f"font-weight:700;letter-spacing:0.14em;color:{color}'>"
+        f"{text.upper()}</span>"
+    )
+    d: dict = dict(text=span, font=dict(family=_FONT_FAMILY, size=13, color=color),
+                   x=x, xanchor=xanchor, pad=dict(l=4, b=10))
+    if y is not None:
+        d["y"] = y
+        d["yanchor"] = yanchor
+    return d
+
+
 def plotly_base(
     title: str = "",
     height: int = 400,

@@ -380,14 +380,7 @@ def forecast_figure(
     chart_title = title or f"{column.replace('_',' ').title()} Shortages — {horizon_days}-Day Forecast"
 
     fig.update_layout(
-        title=dict(
-            text=chart_title,
-            font=dict(family=_font, size=16, color=P["title"]),
-            x=0,
-            y=0.98,
-            yanchor="top",
-            pad=dict(l=4, b=4),
-        ),
+        title=_theme.chart_title_dict(chart_title, y=0.98, yanchor="top"),
         xaxis=dict(
             title="Date",
             title_font=dict(family=_font, size=13, color=P["axis"]),
