@@ -1110,6 +1110,19 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
 }}
 
 /* ════════════════════════════════════
+   MOBILE — chart title font size reduction
+   Plotly renders titles as SVG <text class="gtitle">; tspan children
+   carry the inline font-size from our <span> HTML, but the outer text
+   element's font-size can be overridden here to scale the whole block.
+════════════════════════════════════ */
+@media (max-width: 768px) {{
+    .gtitle,
+    .gtitle tspan {{
+        font-size: 10px !important;
+    }}
+}}
+
+/* ════════════════════════════════════
    MOBILE — prevent horizontal scroll/wobble
    overflow-x: hidden is ONLY applied to the document/viewport level.
    Never apply it to cards — that triggers implicit overflow-y: auto (browser spec).
@@ -1264,19 +1277,46 @@ def scroll_reveal_js() -> str:
 _FONT_FAMILY = "Inter, system-ui, -apple-system, sans-serif"
 
 
+def _wrap_title(text: str, max_line: int = 30) -> str:
+    """
+    Insert a <br> near the midpoint of long titles so they wrap onto two
+    lines in Plotly's SVG renderer. Splits at the word boundary closest to
+    the midpoint. Titles ≤ max_line characters are returned unchanged.
+    The input should be the ALREADY-UPPERCASED title string.
+    """
+    if len(text) <= max_line:
+        return text
+    mid = len(text) // 2
+    left  = text.rfind(" ", 0, mid)
+    right = text.find(" ", mid)
+    if left == -1 and right == -1:
+        return text
+    if left == -1:
+        split = right
+    elif right == -1:
+        split = left
+    else:
+        split = left if (mid - left) <= (right - mid) else right
+    return text[:split] + "<br>" + text[split + 1:]
+
+
 def chart_title_dict(text: str, x: float = 0, xanchor: str = "left",
-                     y: float | None = None, yanchor: str = "top") -> dict:
+                     y: float | None = None, yanchor: str = "top",
+                     wrap: bool = True) -> dict:
     """
     Return a Plotly title dict with KPI-style typography:
     ALL CAPS, 700 weight, 0.14em letter-spacing, theme-aware color.
+    Long titles (>30 chars) are automatically wrapped at a word boundary.
     Use in fig.update_layout(title=theme.chart_title_dict("My Title")).
     """
     dark = is_dark()
     color = "#C7CDD9" if dark else "#6B7280"
+    upper = text.upper()
+    display = _wrap_title(upper) if wrap else upper
     span = (
         f"<span style='font-family:{_FONT_FAMILY};font-size:13px;"
         f"font-weight:700;letter-spacing:0.14em;color:{color}'>"
-        f"{text.upper()}</span>"
+        f"{display}</span>"
     )
     d: dict = dict(text=span, font=dict(family=_FONT_FAMILY, size=13, color=color),
                    x=x, xanchor=xanchor, pad=dict(l=4, b=10))

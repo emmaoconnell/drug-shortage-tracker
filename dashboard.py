@@ -599,7 +599,9 @@ def market_share_treemap(df: pd.DataFrame) -> go.Figure:
         paper_bgcolor=T.chart_bg,
         plot_bgcolor=T.chart_plot_bg,
         font=dict(family=_FONT, size=12, color=T.text_primary),
-        title=_theme.chart_title_dict("Market Share — Top 15 Manufacturers by Shortage Count"),
+        title=_theme.chart_title_dict(
+            "Market Share — Top 15<br>Manufacturers by Shortage Count", wrap=False
+        ),
         xaxis=dict(
             title="Shortage Records",
             title_font=dict(size=13, color=T.text_muted),
