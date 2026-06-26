@@ -16,6 +16,7 @@ Watchlist          Persisted drug monitoring list
 """
 
 import streamlit as st
+import streamlit.components.v1 as _components
 import pandas as pd
 from datetime import datetime
 from io import BytesIO
@@ -51,6 +52,10 @@ if "dark_mode" not in st.session_state:
 
 # Inject theme CSS (re-runs whenever dark_mode toggles)
 st.markdown(theme.css_block(), unsafe_allow_html=True)
+
+# Inject scroll-reveal JS once per session via 0-height iframe.
+# Uses window.parent to reach the Streamlit DOM from the component iframe.
+_components.html(theme.scroll_reveal_js(), height=0, scrolling=False)
 
 
 # ════════════════════════════════════════════════════════════════════════════

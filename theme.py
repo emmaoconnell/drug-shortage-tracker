@@ -1094,53 +1094,102 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
 }}
 
 /* ════════════════════════════════════
-   ENTRANCE ANIMATIONS
+   SCROLL-REVEAL ENTRANCE ANIMATIONS
+   JS adds .scroll-reveal to cards, then .visible when they enter viewport.
 ════════════════════════════════════ */
 
-@keyframes rxFadeSlideUp {{
-    from {{
-        opacity: 0;
-        transform: translateY(16px);
-    }}
-    to {{
-        opacity: 1;
-        transform: translateY(0);
-    }}
+.scroll-reveal {{
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}}
+.scroll-reveal.visible {{
+    opacity: 1;
+    transform: translateY(0);
 }}
 
-/* Apply to chart cards, KPI cards, and custom card wrappers */
-[data-testid="stPlotlyChart"],
-[data-testid="metric-container"],
-.dashboard-card,
-.chart-card {{
-    animation: rxFadeSlideUp 0.55s ease-out both;
-}}
-
-/* Stagger columns slightly so side-by-side cards don't pop in simultaneously */
-[data-testid="stColumn"]:nth-child(2) [data-testid="stPlotlyChart"],
-[data-testid="stColumn"]:nth-child(2) [data-testid="metric-container"] {{
-    animation-delay: 0.07s;
-}}
-[data-testid="stColumn"]:nth-child(3) [data-testid="stPlotlyChart"],
-[data-testid="stColumn"]:nth-child(3) [data-testid="metric-container"] {{
-    animation-delay: 0.14s;
-}}
-[data-testid="stColumn"]:nth-child(4) [data-testid="stPlotlyChart"],
-[data-testid="stColumn"]:nth-child(4) [data-testid="metric-container"] {{
-    animation-delay: 0.21s;
-}}
-
-/* Respect OS-level reduced-motion preference */
 @media (prefers-reduced-motion: reduce) {{
-    [data-testid="stPlotlyChart"],
-    [data-testid="metric-container"],
-    .dashboard-card,
-    .chart-card {{
-        animation: none !important;
+    .scroll-reveal,
+    .scroll-reveal.visible {{
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
     }}
 }}
 
 </style>
+"""
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Scroll-reveal JS (injected via st.components.v1.html)
+# ════════════════════════════════════════════════════════════════════════════
+
+def scroll_reveal_js() -> str:
+    """
+    Returns an HTML string (0-height iframe content) that wires up an
+    IntersectionObserver on the parent Streamlit document.
+
+    Cards matching SELECTORS get .scroll-reveal added by JS; the observer
+    adds .visible when each card enters the viewport (once only).
+    A MutationObserver re-scans after every Streamlit rerender so cards
+    added by navigation or data refresh are picked up automatically.
+    A guard flag (window.__rxRevealReady) prevents duplicate observers
+    across multiple st.components.v1.html calls in the same session.
+    """
+    return """
+<script>
+(function () {
+    var win = window.parent;
+    var doc = win.document;
+
+    // One-time setup per browser session — survive Streamlit reruns
+    if (win.__rxRevealReady) return;
+    win.__rxRevealReady = true;
+
+    var SELECTORS = [
+        '[data-testid="stPlotlyChart"]',
+        '[data-testid="metric-container"]',
+        '.dashboard-card',
+        '.chart-card',
+    ].join(', ');
+
+    var io = new win.IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                io.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
+
+    function attachCards() {
+        doc.querySelectorAll(SELECTORS).forEach(function (el) {
+            if (!el.classList.contains('scroll-reveal')) {
+                el.classList.add('scroll-reveal');
+                io.observe(el);
+            }
+        });
+    }
+
+    function waitForMain() {
+        var main = doc.querySelector('[data-testid="stMain"]') || doc.body;
+        attachCards();
+        // Re-scan whenever Streamlit mutates the main content area
+        var mo = new win.MutationObserver(attachCards);
+        mo.observe(main, { childList: true, subtree: true });
+    }
+
+    // Give Streamlit a moment to render its first batch of cards
+    if (doc.readyState === 'loading') {
+        doc.addEventListener('DOMContentLoaded', function () {
+            setTimeout(waitForMain, 150);
+        });
+    } else {
+        setTimeout(waitForMain, 150);
+    }
+})();
+</script>
 """
 
 
