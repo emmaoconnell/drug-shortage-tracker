@@ -206,7 +206,6 @@ header[data-testid="stHeader"] button,
     background: linear-gradient(180deg, {T.bg_sidebar} 0%, {T.bg_sidebar_end} 100%) !important;
     border-right: 1px solid {T.border_sidebar};
 }}
-[data-testid="stSidebar"] .stRadio label,
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] span,
 [data-testid="stSidebar"] div {{
@@ -217,12 +216,72 @@ header[data-testid="stHeader"] button,
 [data-testid="stSidebar"] h3 {{
     color: {T.text_sidebar_heading} !important;
 }}
-[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {{
-    font-size: 0.875rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-}}
 [data-testid="stSidebar"] hr {{ border-color: {T.border_sidebar} !important; }}
+
+/* ── Pill-style sidebar navigation ── */
+
+/* Wrapper: stack pills vertically with no gap */
+[data-testid="stSidebar"] .stRadio > div {{
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+}}
+
+/* Hide the native circle indicator */
+[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] + div,
+[data-testid="stSidebar"] .stRadio input[type="radio"] {{
+    display: none !important;
+}}
+
+/* Each label becomes a pill button */
+[data-testid="stSidebar"] .stRadio label {{
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    padding: 10px 16px !important;
+    border-radius: 10px !important;
+    cursor: pointer !important;
+    transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease !important;
+    background: transparent !important;
+    color: {T.text_sidebar} !important;
+    font-size: 0.97rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em !important;
+    line-height: 1.3 !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    user-select: none !important;
+}}
+
+/* Hover glow */
+[data-testid="stSidebar"] .stRadio label:hover {{
+    background: rgba(255,255,255,0.10) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 0 0 1px rgba(99,179,237,0.25), 0 2px 8px rgba(0,0,0,0.25) !important;
+}}
+
+/* Active / selected pill */
+[data-testid="stSidebar"] .stRadio label:has(input:checked) {{
+    background: linear-gradient(135deg, #1D4ED8 0%, #2563EB 60%, #3B82F6 100%) !important;
+    color: #FFFFFF !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.50),
+                0 0 12px rgba(59,130,246,0.30),
+                0 2px 8px rgba(0,0,0,0.30) !important;
+}}
+
+/* Inner text span */
+[data-testid="stSidebar"] .stRadio label p,
+[data-testid="stSidebar"] .stRadio label span,
+[data-testid="stSidebar"] .stRadio [data-testid="stMarkdownContainer"] p {{
+    font-size: 0.97rem !important;
+    font-weight: inherit !important;
+    color: inherit !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+}}
 
 /* ── Sidebar utility buttons (theme toggle, Fetch, Load Cached) ── */
 [data-testid="stSidebar"] .stButton button {{
