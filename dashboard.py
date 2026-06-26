@@ -400,6 +400,15 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
     _leg_bg     = "rgba(31,41,55,0.95)" if T.name == "dark" else "rgba(255,255,255,0.95)"
     _leg_border = "#374151" if T.name == "dark" else "#D1D5DB"
 
+    dark = T.name == "dark"
+    _BAR_COLORS = {
+        "Current":            "#B74D4D" if dark else STATUS_COLORS["Current"],
+        "To Be Discontinued": "#B78A36" if dark else STATUS_COLORS["To Be Discontinued"],
+        "Resolved":           "#5C9567" if dark else STATUS_COLORS["Resolved"],
+        "Discontinued":       "#B78A36" if dark else STATUS_COLORS["Discontinued"],
+        "No Longer Marketed": "#B78A36" if dark else STATUS_COLORS["No Longer Marketed"],
+    }
+
     # Stack order: bottom → top  (Current / To Be Discontinued / Resolved)
     _STACK_ORDER = ["Current", "To Be Discontinued", "Resolved",
                     "Discontinued", "No Longer Marketed"]
@@ -409,7 +418,7 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
     if mobile:
         # ── Horizontal stacked layout (mobile) ────────────────────────────
         for status in _STACK_ORDER:
-            color = STATUS_COLORS.get(status)
+            color = _BAR_COLORS.get(status)
             if color is None or status not in pivot.columns:
                 continue
             vals  = pivot[status].tolist()
@@ -447,7 +456,7 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
         x_labels = [n.replace("<br>", " ") for n in short_names]
 
         for status in _STACK_ORDER:
-            color = STATUS_COLORS.get(status)
+            color = _BAR_COLORS.get(status)
             if color is None or status not in pivot.columns:
                 continue
             vals  = pivot[status].tolist()
