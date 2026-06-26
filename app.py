@@ -1155,7 +1155,7 @@ elif page == "Data Table":
         mfr_opts = ["All"] + sorted(df["manufacturer"].unique().tolist())
         sel_mfr  = fc2.selectbox("Manufacturer", mfr_opts)
 
-        text_filter = fc3.text_input("Search name")
+        text_filter = fc3.text_input("Drug name", placeholder="e.g., Sodium Chloride, Cefazolin, Morphine...")
 
         date_sort = fc4.selectbox("Sort by", ["update_date ↓", "update_date ↑", "generic_name ↑"])
 
