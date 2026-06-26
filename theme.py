@@ -1110,19 +1110,6 @@ hr {{ border: none; border-top: 1px solid {T.border}; margin: 32px 0; }}
 }}
 
 /* ════════════════════════════════════
-   MOBILE — chart title font size reduction
-   Plotly renders titles as SVG <text class="gtitle">; tspan children
-   carry the inline font-size from our <span> HTML, but the outer text
-   element's font-size can be overridden here to scale the whole block.
-════════════════════════════════════ */
-@media (max-width: 768px) {{
-    .gtitle,
-    .gtitle tspan {{
-        font-size: 10px !important;
-    }}
-}}
-
-/* ════════════════════════════════════
    MOBILE — prevent horizontal scroll/wobble
    overflow-x: hidden is ONLY applied to the document/viewport level.
    Never apply it to cards — that triggers implicit overflow-y: auto (browser spec).
