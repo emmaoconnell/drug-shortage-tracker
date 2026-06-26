@@ -354,10 +354,15 @@ with st.sidebar:
         "Watchlist",
     ]
 
+    st.markdown(
+        '<p class="nav-heading">Navigation</p>',
+        unsafe_allow_html=True,
+    )
+
     page = st.radio(
-        "Navigation",
+        "nav",
         _PAGES,
-        label_visibility="visible",
+        label_visibility="collapsed",
     )
 
     st.markdown("---")
