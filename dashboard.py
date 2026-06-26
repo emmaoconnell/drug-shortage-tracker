@@ -412,7 +412,7 @@ def top_manufacturers_bar(df: pd.DataFrame, top_n: int = 15) -> go.Figure:
     return fig
 
 
-def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
+def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 10,
                                       mobile: bool = False) -> go.Figure:
     """Grouped bar chart — Shortage Status by Top Manufacturers.
 
@@ -480,9 +480,9 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
 
         _max_line   = max(max(len(s) for s in n.split("<br>")) for n in short_names)
         left_margin = min(140, max(90, _max_line * 7))
-        height      = max(460, top_n * 44 + 100)
+        height      = max(420, top_n * 44 + 80)
 
-        fig.update_layout(barmode="stack", bargap=0.25)
+        fig.update_layout(barmode="stack", bargap=0.18)
         layout = _base("Shortage Status by Top Manufacturers", height=height,
                        margin=dict(t=100, b=50, l=left_margin, r=20), showlegend=True)
         layout["xaxis"].update(title="Shortage Count",
@@ -516,9 +516,9 @@ def manufacturer_current_vs_resolved(df: pd.DataFrame, top_n: int = 12,
                 customdata=hover,
             ))
 
-        height = max(480, top_n * 28 + 160)
+        height = max(440, top_n * 28 + 140)
 
-        fig.update_layout(barmode="stack", bargap=0.30)
+        fig.update_layout(barmode="stack", bargap=0.22)
         layout = _base("Shortage Status by Top Manufacturers", height=height,
                        margin=dict(t=140, b=100, l=60, r=20), showlegend=True)
         layout["title"].update(y=0.97, yanchor="top")
