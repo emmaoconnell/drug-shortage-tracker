@@ -813,76 +813,42 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
         showlegend=False,
     ))
 
-    # ── Overlap detection: find bubbles whose circles overlap > 50% ──────────
-    # Approximate pixel coords (plot area ≈ 470 × 410 px after margins)
-    _PW, _PH = 470, 410
-
-    def _to_screen(xv: float, yv: float) -> tuple[float, float]:
-        sx = (xv - x_lo) / (x_hi - x_lo) * _PW
-        sy = _PH - (yv - y_lo) / (y_hi - y_lo) * _PH
-        return sx, sy
-
-    _bubbles = []
-    for _, row in top.iterrows():
-        xv    = float(row["market_share"])
-        yv    = float(row["avg_duration"])
-        drugs = float(row["unique_drugs"])
-        # Pixel radius mirrors the Plotly trace exactly:
-        #   sizemode="diameter", sizeref = max_drugs / 110
-        #   → rendered diameter = drugs / sizeref = drugs * 110 / max_drugs  (linear)
-        #   → radius = drugs * 55 / max_drugs   (sizemin=18 → min radius 9)
-        r = max((drugs / max_drugs) * 55 if max_drugs else 9, 9)
-        sx, sy = _to_screen(xv, yv)
-        _bubbles.append({"xv": xv, "yv": yv, "sx": sx, "sy": sy, "r": r,
-                          "name": str(row["short_name"]),
-                          "drugs": drugs})
-
-    # Mark any bubble that overlaps >50% with at least one neighbour
-    _overlapping: set[int] = set()
-    for _a in range(len(_bubbles)):
-        for _b in range(_a + 1, len(_bubbles)):
-            _ba, _bb = _bubbles[_a], _bubbles[_b]
-            _dist = ((_ba["sx"] - _bb["sx"]) ** 2 + (_ba["sy"] - _bb["sy"]) ** 2) ** 0.5
-            if _dist < 0.5 * (_ba["r"] + _bb["r"]):
-                _overlapping.add(_a)
-                _overlapping.add(_b)
-
-    # Centroid of overlapping set → push their labels outward from it
-    if _overlapping:
-        _ocx = sum(_bubbles[k]["sx"] for k in _overlapping) / len(_overlapping)
-        _ocy = sum(_bubbles[k]["sy"] for k in _overlapping) / len(_overlapping)
-    else:
-        _ocx, _ocy = _PW / 2, _PH / 2
-
-    # Explicit (ax, ay, xanchor, yanchor) for pairs that the centroid push
-    # would place on the same side.  ax>0=right, ay>0=down (Plotly screen coords).
-    _OVERLAP_OVERRIDES: dict[str, tuple] = {
-        "pfizer": ( 34,  34, "left",   "top"),     # lower-right
-        "teva":   (-34, -34, "right",  "bottom"),  # upper-left
+    # ── Labels for the five key manufacturers only ────────────────────────────
+    # Keys are substrings matched against the lowercased manufacturer name.
+    # (ax, ay): pixel offset from bubble center; None = label centered on bubble.
+    # Plotly ay: positive = down in screen coords.
+    _KEY_LABELS: dict[str, tuple | None] = {
+        "hospira":       None,                        # large bubble — center
+        "fresenius kabi": None,                       # large bubble — center
+        "hikma":         None,                        # large bubble — center
+        "pfizer":        ( 34,  34, "left",  "top"),  # lower-right (avoids Teva)
+        "teva":          (-34, -34, "right", "bottom"), # upper-left (avoids Pfizer)
     }
 
-    def _override(mfr_name: str) -> tuple | None:
-        low = mfr_name.lower()
-        for key, val in _OVERLAP_OVERRIDES.items():
+    def _key_match(mfr: str) -> str | None:
+        low = mfr.lower()
+        # longest key first so "fresenius kabi" beats "fresenius"
+        for key in sorted(_KEY_LABELS, key=len, reverse=True):
             if key in low:
-                return val
+                return key
         return None
 
-    # ── Per-bubble annotations ────────────────────────────────────────────────
     annotations: list[dict] = []
-    for idx, (i, row) in enumerate(top.iterrows()):
-        x_pt  = float(row["market_share"])
-        y_pt  = float(row["avg_duration"])
-        name  = str(row["short_name"])
-        mfr   = str(row["manufacturer"])
-        drugs = float(row["unique_drugs"])
-        bub   = _bubbles[idx]
+    for _, row in top.iterrows():
+        mfr  = str(row["manufacturer"])
+        key  = _key_match(mfr)
+        if key is None:
+            continue                   # unlabeled — hover only
+
+        x_pt = float(row["market_share"])
+        y_pt = float(row["avg_duration"])
+        name = str(row["short_name"])
 
         lbl_color = "#D1D5DB" if dark else "#4B5563"
         font_size = 10 if "<br>" in name or len(name.replace("<br>", " ")) > 10 else 11
 
-        if idx not in _overlapping:
-            # Label sits directly on the bubble — no arrow
+        offset = _KEY_LABELS[key]
+        if offset is None:
             annotations.append(dict(
                 x=x_pt, y=y_pt,
                 xref="x", yref="y",
@@ -894,19 +860,7 @@ def exec_bubble_chart(risk_df: pd.DataFrame, df: pd.DataFrame | None = None) -> 
                 borderpad=0,
             ))
         else:
-            ov = _override(mfr)
-            if ov:
-                ax, ay, xanchor, yanchor = ov
-            else:
-                # Push outward from the local overlap centroid
-                ddx = bub["sx"] - _ocx
-                ddy = bub["sy"] - _ocy
-                mag = (ddx ** 2 + ddy ** 2) ** 0.5 or 1.0
-                OFF = bub["r"] + 20
-                ax  =  (ddx / mag) * OFF
-                ay  = -(ddy / mag) * OFF   # Plotly ay: positive = down
-                xanchor = "left"   if ax >  6 else ("right"  if ax < -6 else "center")
-                yanchor = "bottom" if ay < -6 else ("top"    if ay >  6 else "middle")
+            ax, ay, xanchor, yanchor = offset
             annotations.append(dict(
                 x=x_pt, y=y_pt,
                 xref="x", yref="y",
