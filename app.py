@@ -1547,25 +1547,52 @@ elif page == "Watchlist":
     page_header("Watchlist", "Your drug monitoring dashboard — updated each time data is fetched")
 
     # ── Add drug form ─────────────────────────────────────────────────────────
+    def _is_drug_name(query: str, source_df: pd.DataFrame) -> bool:
+        """Return True if query matches at least one generic_name or brand_name row."""
+        if source_df.empty:
+            return True   # can't validate without data — allow and show "not found" on card
+        q = query.strip()
+        return source_df["generic_name"].fillna("").str.contains(q, case=False, na=False).any() \
+            or source_df["brand_name"].fillna("").str.contains(q, case=False, na=False).any()
+
+    def _is_manufacturer_only(query: str, source_df: pd.DataFrame) -> bool:
+        """Return True if query only matches manufacturer rows, not drug names."""
+        if source_df.empty:
+            return False
+        q = query.strip()
+        has_drug = (
+            source_df["generic_name"].fillna("").str.contains(q, case=False, na=False).any()
+            or source_df["brand_name"].fillna("").str.contains(q, case=False, na=False).any()
+        )
+        has_mfr = source_df["manufacturer"].fillna("").str.contains(q, case=False, na=False).any()
+        return has_mfr and not has_drug
+
     with st.form("add_watchlist_form"):
         col_in, col_btn = st.columns([4, 1])
         with col_in:
             new_drug = st.text_input(
                 "",
-                placeholder="Add drug or manufacturer to watch  (e.g. morphine, Pfizer)",
+                placeholder="e.g. morphine, cefazolin, ampicillin",
             )
         with col_btn:
             st.markdown("<br>", unsafe_allow_html=True)
             add_btn = st.form_submit_button("+ Add", use_container_width=True)
         if add_btn and new_drug.strip():
-            if db.add_to_watchlist(new_drug.strip()):
-                st.success(f"'{new_drug.strip()}' added to watchlist.")
+            term = new_drug.strip()
+            if _is_manufacturer_only(term, df):
+                st.warning(
+                    f"**'{term}'** looks like a manufacturer name. "
+                    "Only medications can be added to your Watchlist. "
+                    "To explore manufacturers, visit the **Manufacturers** page."
+                )
+            elif db.add_to_watchlist(term):
+                st.success(f"'{term}' added to watchlist.")
             else:
-                st.warning(f"'{new_drug.strip()}' is already on your watchlist.")
+                st.warning(f"'{term}' is already on your watchlist.")
 
     watchlist = db.get_watchlist()
     if not watchlist:
-        st.info("Your watchlist is empty. Add a drug or manufacturer above to start monitoring.")
+        st.info("Your watchlist is empty. Add a medication above to start monitoring.")
         st.stop()
 
     # ── Theme tokens ──────────────────────────────────────────────────────────
@@ -1621,13 +1648,13 @@ elif page == "Watchlist":
     }
 
     def _wl_match(query: str, source_df: pd.DataFrame) -> pd.DataFrame:
+        """Match drug name only — manufacturer is informational, not a watchable entity."""
         if source_df.empty:
             return pd.DataFrame()
         q = query.strip()
         mask = (
             source_df["generic_name"].fillna("").str.contains(q, case=False, na=False)
             | source_df["brand_name"].fillna("").str.contains(q, case=False, na=False)
-            | source_df["manufacturer"].fillna("").str.contains(q, case=False, na=False)
         )
         return source_df[mask]
 
