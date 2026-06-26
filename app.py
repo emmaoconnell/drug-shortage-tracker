@@ -1544,15 +1544,19 @@ elif page == "Alerts":
 # PAGE — Watchlist
 # ════════════════════════════════════════════════════════════════════════════
 elif page == "Watchlist":
-    page_header("My Watchlist", "Monitor specific drugs — persists across sessions")
+    page_header("Watchlist", "Your drug monitoring dashboard — updated each time data is fetched")
 
+    # ── Add drug form ─────────────────────────────────────────────────────────
     with st.form("add_watchlist_form"):
         col_in, col_btn = st.columns([4, 1])
         with col_in:
-            new_drug = st.text_input("", placeholder="e.g. morphine, ampicillin, spironolactone, Pfizer")
+            new_drug = st.text_input(
+                "",
+                placeholder="Add drug or manufacturer to watch  (e.g. morphine, Pfizer)",
+            )
         with col_btn:
             st.markdown("<br>", unsafe_allow_html=True)
-            add_btn = st.form_submit_button("Add", use_container_width=True)
+            add_btn = st.form_submit_button("+ Add", use_container_width=True)
         if add_btn and new_drug.strip():
             if db.add_to_watchlist(new_drug.strip()):
                 st.success(f"'{new_drug.strip()}' added to watchlist.")
@@ -1561,19 +1565,62 @@ elif page == "Watchlist":
 
     watchlist = db.get_watchlist()
     if not watchlist:
-        st.info("Your watchlist is empty. Add a drug above.")
+        st.info("Your watchlist is empty. Add a drug or manufacturer above to start monitoring.")
         st.stop()
 
-    section(f"Watching {len(watchlist)} Drug{'s' if len(watchlist) != 1 else ''}")
+    # ── Theme tokens ──────────────────────────────────────────────────────────
+    _WT = theme.get()
+    _dark_wl = _WT.name == "dark"
+    _card_bg      = _WT.bg_card
+    _card_border  = "#32363F" if _dark_wl else "#E2E8F0"
+    _text_primary = _WT.text_primary
+    _text_muted   = _WT.text_muted
+    _card_shadow  = (
+        "0 12px 30px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.30)"
+        if _dark_wl else
+        "0 10px 26px rgba(15,23,42,0.14), 0 4px 10px rgba(15,23,42,0.08)"
+    )
+    _card_shadow_hover = (
+        "0 20px 44px rgba(0,0,0,0.60), 0 8px 20px rgba(0,0,0,0.40)"
+        if _dark_wl else
+        "0 16px 36px rgba(15,23,42,0.20), 0 6px 14px rgba(15,23,42,0.10)"
+    )
 
-    _STATUS_ICON = {
-        "Current":            "Currently in shortage",
-        "To Be Discontinued": "To be discontinued",
-        "Resolved":           "Resolved",
+    # Status colors
+    _STATUS_STRIP = {
+        "Current":            "#C0392B",
+        "To Be Discontinued": "#D4820A",
+        "Resolved":           "#27AE60",
+    }
+    _STATUS_BADGE_BG = {
+        "Current":            ("rgba(192,57,43,0.18)"  if _dark_wl else "rgba(220,38,38,0.10)"),
+        "To Be Discontinued": ("rgba(212,130,10,0.18)" if _dark_wl else "rgba(217,119,6,0.10)"),
+        "Resolved":           ("rgba(39,174,96,0.18)"  if _dark_wl else "rgba(22,163,74,0.10)"),
+    }
+    _STATUS_BADGE_TEXT = {
+        "Current":            ("#F87171" if _dark_wl else "#B91C1C"),
+        "To Be Discontinued": ("#FCD34D" if _dark_wl else "#92400E"),
+        "Resolved":           ("#4ADE80" if _dark_wl else "#15803D"),
+    }
+    _TREND_ICON = {"up": "↑", "stable": "→", "down": "↓"}
+    _TREND_COLOR = {
+        "up":     ("#F87171" if _dark_wl else "#DC2626"),   # red — worsening
+        "stable": ("#94A3B8" if _dark_wl else "#64748B"),
+        "down":   ("#4ADE80" if _dark_wl else "#16A34A"),   # green — improving
+    }
+    _TREND_LABEL = {"up": "Increasing", "stable": "Stable", "down": "Improving"}
+
+    _FDA_REASON_RENAME = {
+        "Demand increase for the drug":                                                        "Demand increase",
+        "Discontinuation of the manufacture of the drug":                                      "Manufacturing discontinuation",
+        "Requirements related to complying with good manufacturing practices":                 "Compliance requirements",
+        "Delay in shipping of the drug":                                                       "Shipping delays",
+        "Regulatory delay":                                                                    "Regulatory delay",
+        "Shortage of an active ingredient":                                                    "Ingredient shortage",
+        "Shortage of an inactive ingredient component":                                        "Ingredient shortage",
     }
 
-    def _watchlist_match(query: str, source_df: pd.DataFrame) -> pd.DataFrame:
-        """Case-insensitive partial match across generic_name, brand_name, manufacturer."""
+    def _wl_match(query: str, source_df: pd.DataFrame) -> pd.DataFrame:
         if source_df.empty:
             return pd.DataFrame()
         q = query.strip()
@@ -1584,50 +1631,216 @@ elif page == "Watchlist":
         )
         return source_df[mask]
 
-    all_detail_frames = []
+    def _trend(match: pd.DataFrame) -> str:
+        """Infer trend from update_date spread and status mix."""
+        if match.empty:
+            return "stable"
+        current_ratio = (match["status"] == "Current").mean()
+        resolved_ratio = (match["status"] == "Resolved").mean()
+        if current_ratio >= 0.7:
+            return "up"
+        if resolved_ratio >= 0.5:
+            return "down"
+        return "stable"
+
+    def _days_in_shortage(match: pd.DataFrame) -> str:
+        """Estimate days in shortage from earliest update_date to today."""
+        if match.empty:
+            return "Not available"
+        dates = match["update_date"].replace("", pd.NA).dropna()
+        if dates.empty:
+            return "Not available"
+        try:
+            earliest = pd.to_datetime(dates, errors="coerce").dropna().min()
+            if pd.isna(earliest):
+                return "Not available"
+            delta = (pd.Timestamp.utcnow().tz_localize(None) - earliest).days
+            return f"{max(0, delta)} days"
+        except Exception:
+            return "Not available"
+
+    def _primary_manufacturers(match: pd.DataFrame, n: int = 2) -> str:
+        if match.empty or "manufacturer" not in match.columns:
+            return "Not available"
+        mfrs = match["manufacturer"].replace("", pd.NA).dropna()
+        top = mfrs.value_counts().head(n).index.tolist()
+        return ", ".join(top) if top else "Not available"
+
+    def _top_reason(match: pd.DataFrame) -> str:
+        if match.empty or "reason" not in match.columns:
+            return "Not available"
+        reasons = match["reason"].replace("", pd.NA).dropna()
+        if reasons.empty:
+            return "Not available"
+        top = reasons.value_counts().index[0]
+        return _FDA_REASON_RENAME.get(top, top)
+
+    def _last_update(match: pd.DataFrame) -> str:
+        if match.empty:
+            return "Not available"
+        dates = match["update_date"].replace("", pd.NA).dropna()
+        return dates.max() if not dates.empty else "Not available"
+
+    def _top_status(match: pd.DataFrame) -> str:
+        if match.empty:
+            return ""
+        priority = ["Current", "To Be Discontinued", "Resolved"]
+        counts = match["status"].value_counts()
+        for s in priority:
+            if s in counts.index:
+                return s
+        return counts.index[0] if not counts.empty else ""
+
+    # ── Card CSS (injected once) ──────────────────────────────────────────────
+    st.markdown(f"""
+<style>
+.wl-card {{
+    position: relative;
+    background: {_card_bg};
+    border: 1px solid {_card_border};
+    border-radius: 14px;
+    padding: 20px 20px 16px 24px;
+    margin-bottom: 16px;
+    box-shadow: {_card_shadow};
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+    overflow: hidden;
+}}
+.wl-card:hover {{
+    box-shadow: {_card_shadow_hover};
+    transform: translateY(-2px);
+}}
+.wl-strip {{
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    border-radius: 14px 0 0 14px;
+}}
+.wl-drug-name {{
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: {_text_primary};
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+}}
+.wl-badge {{
+    display: inline-block;
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}}
+.wl-meta-grid {{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px 20px;
+    margin-top: 12px;
+}}
+.wl-meta-item {{
+    min-width: 0;
+}}
+.wl-meta-label {{
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: {_text_muted};
+    margin-bottom: 3px;
+}}
+.wl-meta-value {{
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: {_text_primary};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}}
+.wl-trend {{
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}}
+.wl-actions {{
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid {_card_border};
+}}
+@media (max-width: 768px) {{
+    .wl-meta-grid {{ grid-template-columns: 1fr 1fr; }}
+}}
+</style>
+""", unsafe_allow_html=True)
+
+    section(f"Monitoring {len(watchlist)} Drug{'s' if len(watchlist) != 1 else ''}")
 
     for item in watchlist:
-        term = item["generic_name"]
-        match = _watchlist_match(term, df)
+        term  = item["generic_name"]
+        match = _wl_match(term, df)
 
-        c_name, c_status, c_count, c_updated, c_rm = st.columns([3, 2, 1, 2, 1])
-        with c_name:
-            st.markdown(f"**{term}**")
-        with c_status:
-            if df.empty:
-                st.markdown("—")
-            elif match.empty:
-                st.markdown("Not found in dataset")
-            else:
-                # Summarise across all matching rows (prefer active statuses)
-                statuses = match["status"].value_counts()
-                top_status = statuses.index[0] if not statuses.empty else ""
-                label = _STATUS_ICON.get(top_status, f"{top_status}" if top_status else "Unknown")
-                st.markdown(label)
-        with c_count:
-            if not match.empty:
-                st.caption(f"{len(match)} record{'s' if len(match) != 1 else ''}")
-        with c_updated:
-            if not match.empty:
-                dates = match["update_date"].replace("", pd.NA).dropna()
-                upd = dates.max() if not dates.empty else ""
-                top_name = match["generic_name"].iloc[0]
-                st.caption(f"{top_name[:28]}" + ("…" if len(top_name) > 28 else ""))
-                if upd:
-                    st.caption(f"Updated {upd}")
-        with c_rm:
+        status    = _top_status(match) if not match.empty else ""
+        strip_clr = _STATUS_STRIP.get(status, "#64748B")
+        badge_bg  = _STATUS_BADGE_BG.get(status, ("rgba(100,116,139,0.18)" if _dark_wl else "rgba(100,116,139,0.10)"))
+        badge_txt = _STATUS_BADGE_TEXT.get(status, _text_muted)
+        status_label = status if status else ("Not in dataset" if not df.empty else "No data loaded")
+
+        last_upd  = _last_update(match)
+        days_str  = _days_in_shortage(match)
+        rec_count = f"{len(match)} record{'s' if len(match) != 1 else ''}" if not match.empty else "Not available"
+        mfrs      = _primary_manufacturers(match)
+        reason    = _top_reason(match)
+        trend_key = _trend(match)
+        trend_clr = _TREND_COLOR[trend_key]
+        trend_lbl = f"{_TREND_ICON[trend_key]} {_TREND_LABEL[trend_key]}"
+
+        st.markdown(f"""
+<div class="wl-card">
+  <div class="wl-strip" style="background:{strip_clr}"></div>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div>
+      <div class="wl-drug-name">{term.title()}</div>
+      <span class="wl-badge" style="background:{badge_bg};color:{badge_txt}">{status_label}</span>
+    </div>
+    <div class="wl-trend" style="color:{trend_clr}">{trend_lbl}</div>
+  </div>
+  <div class="wl-meta-grid">
+    <div class="wl-meta-item">
+      <div class="wl-meta-label">Last FDA Update</div>
+      <div class="wl-meta-value">{last_upd}</div>
+    </div>
+    <div class="wl-meta-item">
+      <div class="wl-meta-label">Days in Shortage</div>
+      <div class="wl-meta-value">{days_str}</div>
+    </div>
+    <div class="wl-meta-item">
+      <div class="wl-meta-label">FDA Records</div>
+      <div class="wl-meta-value">{rec_count}</div>
+    </div>
+    <div class="wl-meta-item" style="grid-column:span 2">
+      <div class="wl-meta-label">Primary Manufacturer(s)</div>
+      <div class="wl-meta-value" title="{mfrs}">{mfrs}</div>
+    </div>
+    <div class="wl-meta-item">
+      <div class="wl-meta-label">FDA Shortage Reason</div>
+      <div class="wl-meta-value" title="{reason}">{reason}</div>
+    </div>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+        # Action buttons rendered below each card via Streamlit (not inside HTML)
+        btn_col_rm, btn_col_detail, _ = st.columns([1, 1.4, 6])
+        with btn_col_rm:
             if st.button("Remove", key=f"rm_{item['id']}", use_container_width=True):
                 db.remove_from_watchlist(term)
                 st.rerun()
-        st.divider()
+        with btn_col_detail:
+            if st.button("View Details", key=f"vd_{item['id']}", use_container_width=True):
+                st.session_state[f"wl_expand_{item['id']}"] = not st.session_state.get(f"wl_expand_{item['id']}", False)
 
-        if not match.empty:
-            all_detail_frames.append(match)
-
-    # Detail table — union of all matched rows
-    if all_detail_frames:
-        section("Current Shortage Detail")
-        wl_detail = pd.concat(all_detail_frames, ignore_index=True).drop_duplicates()
-        df_show(wl_detail, height=400)
-    elif not df.empty:
-        st.info("None of your watchlisted drugs appear in the loaded shortage data.")
+        if st.session_state.get(f"wl_expand_{item['id']}", False) and not match.empty:
+            df_show(match, height=260)
